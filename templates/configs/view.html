@@ -6,7 +6,7 @@
     <h1>{{ config.name }}</h1>
     <div>
         <a href="{{ url_for('configs.edit', config_id=config.id) }}" class="btn">Edit Config</a>
-        <a href="{{ url_for('versions.edit_latest', config_id=config.id) }}" class="btn btn-primary">Edit Latest Version</a>
+        <a href="{{ url_for('versions.fork_edit', version_id=latest.id) }}" class="btn btn-primary">Fork &amp; Edit Latest</a>
     </div>
 </div>
 
@@ -14,7 +14,7 @@
 
 {% if latest %}
 <div class="card">
-    <h3>Version {{ latest.version_number }} (latest)</h3>
+    <h3>Version {{ latest.version_number }} (latest){% if latest.status == 'working' %} <span class="badge working">✓ Working</span>{% elif latest.status == 'broken' %} <span class="badge broken">✗ Broken</span>{% endif %}</h3>
     <p class="meta">Created: {{ latest.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
     {% if latest.comments %}
     <div class="comments"><strong>Notes:</strong> {{ latest.comments }}</div>
@@ -31,10 +31,15 @@
     </div>
 
     <div class="actions">
-        <a href="{{ url_for('versions.edit', version_id=latest.id) }}" class="btn btn-primary">Edit This Version</a>
+        {% if running_version_id == latest.id %}
+        <span class="status running" style="margin-right:0.5rem">● Running</span>
+        {% endif %}
+        <a href="{{ url_for('versions.fork_edit', version_id=latest.id) }}" class="btn btn-primary">Fork &amp; Edit</a>
         <form method="POST" action="{{ url_for('server.start', version_id=latest.id) }}" class="inline">
-            {% if server_status.running %}
-            <button type="submit" class="btn btn-warning">Restart (Stops Current)</button>
+            {% if running_version_id == latest.id %}
+            <button type="submit" class="btn btn-warning">Restart</button>
+            {% elif server_status.running %}
+            <button type="submit" class="btn btn-success">Launch (Stops Current)</button>
             {% else %}
             <button type="submit" class="btn btn-success">Launch Server</button>
             {% endif %}
@@ -107,15 +112,21 @@
     </thead>
     <tbody>
         {% for v in versions %}
-        <tr class="{% if v.id == latest.id %}current{% endif %}">
-            <td>{{ v.version_number }}</td>
+        <tr class="{% if v.id == latest.id %}current{% endif %}{% if v.id == running_version_id %} running{% endif %}">
+            <td><a href="{{ url_for('versions.edit', version_id=v.id) }}">{{ v.version_number }}</a>{% if v.id == running_version_id %} <span class="status running" style="font-size:0.7rem;vertical-align:middle">●</span>{% endif %}{% if v.status == 'working' %} <span class="badge working">✓</span>{% elif v.status == 'broken' %} <span class="badge broken">✗</span>{% endif %}</td>
             <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ (v.comments or '')[:60] }}</td>
             <td class="actions">
-                <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn btn-sm">Edit</a>
-                {% if v.id != latest.id %}
+                <a href="{{ url_for('versions.fork_edit', version_id=v.id) }}" class="btn btn-sm">Fork &amp; Edit</a>
+                {% if v.id == running_version_id %}
+                <span class="status running" style="font-size:0.8rem">● Running</span>
+                {% else %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    {% if server_status.running %}
+                    <button type="submit" class="btn btn-sm btn-warning">Run (Stops Current)</button>
+                    {% else %}
                     <button type="submit" class="btn btn-sm btn-success">Run</button>
+                    {% endif %}
                 </form>
                 {% endif %}
             </td>

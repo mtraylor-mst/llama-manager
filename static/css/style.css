@@ -41,6 +41,8 @@ a:hover { color: var(--primary-hover); }
 
 .status { padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.85rem; }
 .status.running { background: #2d4a2d; color: var(--success); }
+.status.running a { color: var(--success); text-decoration: underline; }
+.status.running a:hover { color: #8ab876; }
 .status.stopped { background: #3d2d2d; color: var(--danger); }
 
 /* Buttons */
@@ -190,11 +192,54 @@ a:hover { color: var(--primary-hover); }
 .alert { padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 3px; font-size: 0.9rem; }
 .alert-success { background: #2d4a2d; color: var(--success); border: 1px solid var(--success); }
 .alert-error { background: #3d2d2d; color: var(--danger); border: 1px solid var(--danger); }
+.alert-warning { background: #3d3a2d; color: var(--warning); border: 1px solid var(--warning); }
+.alert-info { background: #2d3d4a; color: var(--primary); border: 1px solid var(--primary); }
 
 /* Misc */
 .empty { color: var(--text-dim); padding: 2rem 0; text-align: center; }
 .description { color: var(--text-dim); margin-bottom: 1rem; }
 .current { background: rgba(78, 130, 170, 0.1); }
+.running { background: rgba(106, 153, 85, 0.1) !important; }
+
+/* Running banner */
+.running-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    background: #2d4a2d;
+    border: 1px solid var(--success);
+    border-radius: 3px;
+    font-size: 0.85rem;
+}
+.running-banner.running-is-this {
+    background: rgba(106, 153, 85, 0.15);
+    border-color: var(--success);
+}
+.running-banner-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.4rem;
+}
+
+/* Status badges */
+.badge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    margin-left: 0.3rem;
+    vertical-align: middle;
+}
+.badge.working {
+    background: #2d4a2d;
+    color: var(--success);
+}
+.badge.broken {
+    background: #3d2d2d;
+    color: var(--danger);
+}
 
 /* Actions row */
 .actions { display: flex; gap: 0.4rem; align-items: center; }

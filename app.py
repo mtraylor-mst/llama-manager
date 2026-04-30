@@ -12,9 +12,17 @@ def create_app():
 
     @app.context_processor
     def inject_context():
-        from services.screen_manager import get_status
+        from services.screen_manager import get_status, get_running_version_id
+        st = get_status()
+        running_vid = get_running_version_id() if st['running'] else None
+        running_ver_info = None
+        if running_vid:
+            from models.configs import get_version
+            running_ver_info = get_version(running_vid)
         return {
-            'server_status': get_status(),
+            'server_status': st,
+            'running_version_id': running_vid,
+            'running_version_info': running_ver_info,
             'model_dir': MODEL_DIR,
         }
 

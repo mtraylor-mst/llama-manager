@@ -5,10 +5,40 @@
 <h1>Edit Version {{ version.version_number }}</h1>
 <p class="meta">Config: <a href="{{ url_for('configs.view', config_id=version.config_id) }}">{{ version.config_name }}</a></p>
 
+{% if running_version and running_version.id != version.id %}
+<div class="running-banner">
+    <span class="status running">● Running</span>
+    <span>Version {{ running_version.version_number }} is currently running, not this one.</span>
+    <div class="running-banner-actions">
+        <form method="POST" action="{{ url_for('server.start', version_id=version.id) }}" class="inline">
+            <button type="submit" class="btn btn-sm btn-warning">Switch to This Version</button>
+        </form>
+        <a href="{{ url_for('versions.edit', version_id=running_version.id) }}" class="btn btn-sm">Edit Running Version</a>
+    </div>
+</div>
+{% elif running_version and running_version.id == version.id %}
+<div class="running-banner running-is-this">
+    <span class="status running">● Running</span>
+    <span>This version is currently running.</span>
+    <div class="running-banner-actions">
+        <button hx-post="{{ url_for('server.stop') }}" hx-target="#flash-area" class="btn btn-sm btn-danger">Stop Server</button>
+    </div>
+</div>
+{% endif %}
+
 <form method="POST" class="form-panel form-long" id="version-form">
     <div class="form-group">
         <label>Comments / Notes</label>
         <textarea name="comments" rows="2" placeholder="TPS, OOM, issues, observations...">{{ version.comments or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+            <option value=""{% if not version.status %} selected{% endif %}>Not Set</option>
+            <option value="working"{% if version.status == 'working' %} selected{% endif %}>Working</option>
+            <option value="broken"{% if version.status == 'broken' %} selected{% endif %}>Broken</option>
+        </select>
     </div>
 
     <!-- Category tabs -->

@@ -16,9 +16,13 @@ CREATE TABLE IF NOT EXISTS config_versions (
     version_number INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     comments TEXT,
+    status VARCHAR(20) DEFAULT NULL,
     FOREIGN KEY (config_id) REFERENCES configs(id) ON DELETE CASCADE,
     UNIQUE KEY uniq_config_version (config_id, version_number)
 );
+
+-- Migration: Add status column if it doesn't exist yet
+ALTER TABLE config_versions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS performance_metrics (
     id INT AUTO_INCREMENT PRIMARY KEY,

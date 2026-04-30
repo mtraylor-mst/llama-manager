@@ -13,7 +13,7 @@
         <div class="nav-right">
             {% if server_status.running %}
             <span class="status running" hx-get="{{ url_for('server.status') }}" hx-trigger="every 10s" hx-swap="outerHTML">
-                ● Running
+                ● Running{% if running_version_info %} <a href="{{ url_for('versions.edit', version_id=running_version_info.id) }}">v{{ running_version_info.version_number }} ({{ running_version_info.config_name }})</a>{% endif %}
                 <button hx-post="{{ url_for('server.import_config') }}" hx-target="#flash-area" class="btn btn-sm btn-import">Import Config</button>
                 <button hx-post="{{ url_for('server.stop') }}" hx-target="#flash-area" class="btn btn-sm btn-danger">Stop</button>
             </span>

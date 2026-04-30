@@ -7,14 +7,25 @@ bp = Blueprint('server', __name__)
 
 @bp.route('/server/status')
 def status():
-    from services.screen_manager import get_status
+    from services.screen_manager import get_status, get_running_version_id
     st = get_status()
+    running_vid = get_running_version_id() if st['running'] else None
+
+    # Look up version details for display
+    running_ver_info = None
+    if running_vid:
+        from models.configs import get_version
+        running_ver_info = get_version(running_vid)
+
     if request.headers.get('HX-Request'):
         # Return HTML for HTMX swap
         if st['running']:
+            ver_label = ''
+            if running_ver_info:
+                ver_label = f' <a href="{url_for("versions.edit", version_id=running_ver_info["id"])}">v{running_ver_info["version_number"]} ({running_ver_info["config_name"]})</a>'
             return (f'<span class="status running" hx-get="{url_for("server.status")}" '
                     f'hx-trigger="every 10s" hx-swap="outerHTML">'
-                    f'● Running '
+                    f'● Running{ver_label} '
                     f'<button hx-post="{url_for("server.import_config")}" hx-target="#flash-area" '
                     f'class="btn btn-sm btn-import">Import Config</button> '
                     f'<button hx-post="{url_for("server.stop")}" hx-target="#flash-area" '

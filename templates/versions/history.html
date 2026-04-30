@@ -18,15 +18,17 @@
     </thead>
     <tbody>
         {% for v in versions %}
-        <tr>
-            <td>{{ v.version_number }}</td>
+        <tr class="{% if v.id == running_version_id %}running{% endif %}{% if v.id == latest_version_id %} current{% endif %}">
+            <td><a href="{{ url_for('versions.edit', version_id=v.id) }}">{{ v.version_number }}</a>{% if v.id == running_version_id %} <span class="status running" style="font-size:0.7rem;vertical-align:middle">●</span>{% endif %}{% if v.status == 'working' %} <span class="badge working">✓</span>{% elif v.status == 'broken' %} <span class="badge broken">✗</span>{% endif %}</td>
             <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ (v.comments or '')[:80] }}</td>
             <td class="actions">
                 <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn btn-sm">Edit</a>
-                {% if server_status.running and v.id != latest_version_id %}
+                {% if v.id == running_version_id %}
+                <span class="status running" style="font-size:0.8rem">● Running</span>
+                {% elif server_status.running and v.id != latest_version_id %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
-                    <button type="submit" class="btn btn-sm btn-warning">Restart (Stops Current)</button>
+                    <button type="submit" class="btn btn-sm btn-warning">Run (Stops Current)</button>
                 </form>
                 {% elif not server_status.running %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
