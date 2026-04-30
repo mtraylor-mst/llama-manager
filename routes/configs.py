@@ -24,7 +24,7 @@ def new():
 
 @bp.route('/config/<int:config_id>')
 def view(config_id):
-    from models.configs import get_config, get_latest_version, get_all_versions, get_performance_metrics
+    from models.configs import get_config, get_latest_version, get_all_versions, get_performance_metrics, get_version
     config = get_config(config_id)
     if not config:
         flash('Config not found', 'error')
@@ -32,22 +32,28 @@ def view(config_id):
 
     latest = get_latest_version(config_id)
     versions = get_all_versions(config_id)
-    metrics = get_performance_metrics(latest['id']) if latest else []
 
     # Check if any version of this config is currently running
     from services.screen_manager import get_running_version_id
     running_vid = get_running_version_id()
     running_is_this_config = False
+    running_version = None
     if running_vid:
         for v in versions:
             vid = v['id'] if isinstance(v, dict) else v[0]
             if vid == running_vid:
                 running_is_this_config = True
+                running_version = get_version(running_vid)
                 break
+
+    # Show the running version in the main card if it's from this config, otherwise latest
+    featured = running_version if running_is_this_config else latest
+    metrics = get_performance_metrics(featured['id']) if featured else []
 
     return render_template(
         'configs/view.html',
         config=config,
+        featured=featured,
         latest=latest,
         versions=versions,
         metrics=metrics,

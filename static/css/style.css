@@ -199,6 +199,7 @@ a:hover { color: var(--primary-hover); }
 .empty { color: var(--text-dim); padding: 2rem 0; text-align: center; }
 .description { color: var(--text-dim); margin-bottom: 1rem; }
 .current { background: rgba(78, 130, 170, 0.1); }
+.featured { background: rgba(78, 130, 170, 0.15); }
 .running { background: rgba(106, 153, 85, 0.1) !important; }
 
 /* Running banner */

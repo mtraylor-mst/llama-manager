@@ -6,7 +6,7 @@
     <h1>{{ config.name }}</h1>
     <div>
         <a href="{{ url_for('configs.edit', config_id=config.id) }}" class="btn">Edit Config</a>
-        <a href="{{ url_for('versions.fork_edit', version_id=latest.id) }}" class="btn btn-primary">Fork &amp; Edit Latest</a>
+        <a href="{{ url_for('versions.fork_edit', version_id=featured.id) }}" class="btn btn-primary">Fork &amp; Edit {% if running_version_id == featured.id %}Running{% else %}Latest{% endif %}</a>
     </div>
 </div>
 
@@ -14,29 +14,29 @@
 
 {% if latest %}
 <div class="card">
-    <h3>Version {{ latest.version_number }} (latest){% if latest.status == 'working' %} <span class="badge working">✓ Working</span>{% elif latest.status == 'broken' %} <span class="badge broken">✗ Broken</span>{% endif %}</h3>
-    <p class="meta">Created: {{ latest.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-    {% if latest.comments %}
-    <div class="comments"><strong>Notes:</strong> {{ latest.comments }}</div>
+    <h3>Version {{ featured.version_number }} ({% if running_version_id == featured.id %}running{% else %}latest{% endif %}){% if featured.status == 'working' %} <span class="badge working">✓ Working</span>{% elif featured.status == 'broken' %} <span class="badge broken">✗ Broken</span>{% endif %}</h3>
+    <p class="meta">Created: {{ featured.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+    {% if featured.comments %}
+    <div class="comments"><strong>Notes:</strong> {{ featured.comments }}</div>
     {% endif %}
 
     <div class="command-box">
-        <button class="btn btn-sm" id="copy-btn-{{ latest.id }}" onclick="copyCommand({{ latest.id }}, this)">Copy</button>
-        <input type="text" readonly id="cmd-{{ latest.id }}" value="">
+        <button class="btn btn-sm" id="copy-btn-{{ featured.id }}" onclick="copyCommand({{ featured.id }}, this)">Copy</button>
+        <input type="text" readonly id="cmd-{{ featured.id }}" value="">
         <script>
-            fetch('{{ url_for("versions.command", version_id=latest.id) }}')
+            fetch('{{ url_for("versions.command", version_id=featured.id) }}')
                 .then(r => r.json())
-                .then(d => { document.getElementById('cmd-{{ latest.id }}').value = d.command; });
+                .then(d => { document.getElementById('cmd-{{ featured.id }}').value = d.command; });
         </script>
     </div>
 
     <div class="actions">
-        {% if running_version_id == latest.id %}
+        {% if running_version_id == featured.id %}
         <span class="status running" style="margin-right:0.5rem">● Running</span>
         {% endif %}
-        <a href="{{ url_for('versions.fork_edit', version_id=latest.id) }}" class="btn btn-primary">Fork &amp; Edit</a>
-        <form method="POST" action="{{ url_for('server.start', version_id=latest.id) }}" class="inline">
-            {% if running_version_id == latest.id %}
+        <a href="{{ url_for('versions.fork_edit', version_id=featured.id) }}" class="btn btn-primary">Fork &amp; Edit</a>
+        <form method="POST" action="{{ url_for('server.start', version_id=featured.id) }}" class="inline">
+            {% if running_version_id == featured.id %}
             <button type="submit" class="btn btn-warning">Restart</button>
             {% elif server_status.running %}
             <button type="submit" class="btn btn-success">Launch (Stops Current)</button>
@@ -44,7 +44,7 @@
             <button type="submit" class="btn btn-success">Launch Server</button>
             {% endif %}
         </form>
-        <button class="btn" onclick="runBenchmark({{ latest.id }}, this)">Run Benchmark</button>
+        <button class="btn" onclick="runBenchmark({{ featured.id }}, this)">Run Benchmark</button>
         <a href="{{ url_for('versions.history', config_id=config.id) }}" class="btn">View History</a>
     </div>
 </div>
@@ -112,7 +112,7 @@
     </thead>
     <tbody>
         {% for v in versions %}
-        <tr class="{% if v.id == latest.id %}current{% endif %}{% if v.id == running_version_id %} running{% endif %}">
+       <tr class="{% if v.id == featured.id %}featured{% endif %}{% if v.id == latest.id and v.id != featured.id %}current{% endif %}{% if v.id == running_version_id %} running{% endif %}">
             <td><a href="{{ url_for('versions.edit', version_id=v.id) }}">{{ v.version_number }}</a>{% if v.id == running_version_id %} <span class="status running" style="font-size:0.7rem;vertical-align:middle">●</span>{% endif %}{% if v.status == 'working' %} <span class="badge working">✓</span>{% elif v.status == 'broken' %} <span class="badge broken">✗</span>{% endif %}</td>
             <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ (v.comments or '')[:60] }}</td>
