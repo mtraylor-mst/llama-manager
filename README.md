@@ -24,7 +24,7 @@ mysql -h $HOST -u $USER -p llama_configs < schema.sql
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLAMA_DB_HOST` | `10.10.3.15` | Database host |
+| `LLAMA_DB_HOST` | `127.0.0.1` | Database host |
 | `LLAMA_DB_USER` | `llama_mgr` | Database user |
 | `LLAMA_DB_PASS` | `llama_mgr` | Database password |
 | `LLAMA_DB_NAME` | `llama_configs` | Database name |
