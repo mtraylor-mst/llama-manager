@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if config else 'New' }} Config{% endblock %}
+
+{% block content %}
+<h1>{{ 'Edit' if config else 'New' }} Config</h1>
+
+<form method="POST" class="form-panel">
+    <div class="form-group">
+        <label>Name *</label>
+        <input type="text" name="name" value="{{ config.name if config else '' }}" required placeholder="e.g. Llama3-8B-Q4">
+    </div>
+    <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" rows="3" placeholder="Notes about this config...">{{ config.description if config else '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>Model Directory</label>
+        <input type="text" name="model_dir" value="{{ config.model_dir if config else model_dir }}" placeholder="/path/to/models">
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{{ 'Save' if config else 'Create' }}</button>
+        <a href="{{ url_for('configs.view', config_id=config.id) if config else url_for('index') }}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}

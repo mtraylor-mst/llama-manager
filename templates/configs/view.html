@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ config.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ config.name }}</h1>
+    <div>
+        <a href="{{ url_for('configs.edit', config_id=config.id) }}" class="btn">Edit Config</a>
+        <a href="{{ url_for('versions.edit_latest', config_id=config.id) }}" class="btn btn-primary">Edit Latest Version</a>
+    </div>
+</div>
+
+<p class="description">{{ config.description or '(no description)' }}</p>
+
+{% if latest %}
+<div class="card">
+    <h3>Version {{ latest.version_number }} (latest)</h3>
+    <p class="meta">Created: {{ latest.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+    {% if latest.comments %}
+    <div class="comments"><strong>Notes:</strong> {{ latest.comments }}</div>
+    {% endif %}
+
+    <div class="command-box">
+        <button class="btn btn-sm" id="copy-btn-{{ latest.id }}" onclick="copyCommand({{ latest.id }}, this)">Copy</button>
+        <input type="text" readonly id="cmd-{{ latest.id }}" value="">
+        <script>
+            fetch('{{ url_for("versions.command", version_id=latest.id) }}')
+                .then(r => r.json())
+                .then(d => { document.getElementById('cmd-{{ latest.id }}').value = d.command; });
+        </script>
+    </div>
+
+    <div class="actions">
+        <a href="{{ url_for('versions.edit', version_id=latest.id) }}" class="btn btn-primary">Edit This Version</a>
+        <form method="POST" action="{{ url_for('server.start', version_id=latest.id) }}" class="inline">
+            {% if server_status.running %}
+            <button type="submit" class="btn btn-warning">Restart (Stops Current)</button>
+            {% else %}
+            <button type="submit" class="btn btn-success">Launch Server</button>
+            {% endif %}
+        </form>
+        <button class="btn" onclick="runBenchmark({{ latest.id }}, this)">Run Benchmark</button>
+        <a href="{{ url_for('versions.history', config_id=config.id) }}" class="btn">View History</a>
+    </div>
+</div>
+
+{% if metrics %}
+<div class="card" style="margin-top:1rem">
+    <h3>Benchmark Results</h3>
+    <table class="table">
+        <thead>
+            <tr><th>Recorded</th><th>Load Time</th><th>TPS</th><th>VRAM</th><th>CPU</th><th>Notes</th></tr>
+        </thead>
+        <tbody id="benchmark-table">
+            {% for m in metrics %}
+            <tr>
+                <td>{{ m.recorded_at.strftime('%H:%M') if m.recorded_at else '' }}</td>
+                <td>{{ '%.1fs'|format(m.load_time_sec) if m.load_time_sec else '-' }}</td>
+                <td>{{ '%.1f'|format(m.tps) if m.tps else '-' }}</td>
+                <td>{{ m.vram_used_mb }} MB{% if m.vram_used_mb %}{% endif %}</td>
+                <td>{{ '%.0f%%'|format(m.peak_cpu_pct) if m.peak_cpu_pct else '-' }}</td>
+                <td>{{ (m.notes or '')[:60] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<div id="benchmark-status"></div>
+
+{% if running_version_id %}
+<div class="card log-panel" style="margin-top:1rem">
+    <h3>Live Logs <span class="status running">● Running</span></h3>
+    <pre id="live-logs"><code>Loading...</code></pre>
+</div>
+
+<script>
+(function() {
+    const logEl = document.getElementById('live-logs');
+    const codeEl = logEl.querySelector('code');
+    let buffer = [];
+    const MAX_LINES = 200;
+
+    function connect() {
+        const evt = new EventSource('{{ url_for("server.stream_logs") }}');
+        evt.onmessage = function(e) {
+            buffer.push(e.data);
+            if (buffer.length > MAX_LINES) buffer.shift();
+            codeEl.textContent = buffer.join('\n') + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        };
+        evt.onerror = function() {
+            evt.close();
+            setTimeout(connect, 3000);
+        };
+    }
+    connect();
+})();
+</script>
+{% endif %}
+
+<h3 style="margin-top:1.5rem">All Versions</h3>
+<table class="table">
+    <thead>
+        <tr><th>#</th><th>Created</th><th>Comments</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+        {% for v in versions %}
+        <tr class="{% if v.id == latest.id %}current{% endif %}">
+            <td>{{ v.version_number }}</td>
+            <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ (v.comments or '')[:60] }}</td>
+            <td class="actions">
+                <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn btn-sm">Edit</a>
+                {% if v.id != latest.id %}
+                <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    <button type="submit" class="btn btn-sm btn-success">Run</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">No versions yet.</p>
+{% endif %}
+
+<script>
+async function runBenchmark(versionId, btn) {
+    const status = document.getElementById('benchmark-status');
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+    status.innerHTML = '<div class="alert alert-info">Running benchmark... (this may take 30-60s)</div>';
+
+    try {
+        const resp = await fetch(`/version/${versionId}/benchmark`, {
+            method: 'POST',
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            status.innerHTML = `<div class="alert alert-success">
+                Benchmark complete: <strong>${data.tps} TPS</strong>,
+                ${data.tokens_generated} tokens in ${data.duration_sec}s,
+                VRAM: ${data.vram_used_mb || '-'} MB
+            </div>`;
+            // Reload page to show new metrics in table
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            status.innerHTML = `<div class="alert alert-error">Benchmark failed: ${data.error || 'unknown error'}</div>`;
+        }
+    } catch (e) {
+        status.innerHTML = `<div class="alert alert-error">Benchmark failed: ${e.message}</div>`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Run Benchmark';
+}
+
+function copyCommand(id, btn) {
+    const input = document.getElementById('cmd-' + id);
+    navigator.clipboard.writeText(input.value).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+}
+</script>
+{% endblock %}

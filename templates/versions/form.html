@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Version {{ version.version_number }} - Edit{% endblock %}
+
+{% block content %}
+<h1>Edit Version {{ version.version_number }}</h1>
+<p class="meta">Config: <a href="{{ url_for('configs.view', config_id=version.config_id) }}">{{ version.config_name }}</a></p>
+
+<form method="POST" class="form-panel form-long" id="version-form">
+    <div class="form-group">
+        <label>Comments / Notes</label>
+        <textarea name="comments" rows="2" placeholder="TPS, OOM, issues, observations...">{{ version.comments or '' }}</textarea>
+    </div>
+
+    <!-- Category tabs -->
+    <div class="tabs">
+        <div class="tab-headers">
+            {% for cat in categories %}
+            <button type="button" class="tab-btn{% if loop.first %} active{% endif %}"
+                    data-tab="{{ cat }}"
+                    onclick="showTab('{{ cat }}', this)">{{ category_labels[cat] }}</button>
+            {% endfor %}
+        </div>
+
+        {% for cat in categories %}
+        <div class="tab-content" id="tab-{{ cat }}" style="display:{% if loop.first %}block{% else %}none{% endif %}">
+            {% set row = data[cat] %}
+            <table class="params-table">
+                <tbody>
+                    {% for col, label in category_fields(cat) %}
+                    <tr>
+                        <td><label for="{{ cat }}_{{ col }}">{{ label }}</label></td>
+                        <td>{{ render_field(cat, col, row.get(col)) | safe }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Complex value sections -->
+    {% for tbl in complex_tables %}
+    <details class="complex-section">
+        <summary>{{ complex_label(tbl) }} ({{ data[tbl]|length }})</summary>
+        <div id="complex-{{ tbl }}">
+            {{ render_complex(tbl, data[tbl]) | safe }}
+        </div>
+        <button type="button" class="btn btn-sm" onclick="addComplexRow('{{ tbl }}')">+ Add</button>
+    </details>
+    {% endfor %}
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Version</button>
+        <a href="{{ url_for('configs.view', config_id=version.config_id) }}" class="btn">Cancel</a>
+    </div>
+</form>
+
+<script>
+function showTab(cat, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + cat).style.display = 'block';
+    btn.classList.add('active');
+}
+
+function addComplexRow(tbl) {
+    const container = document.getElementById('complex-' + tbl);
+    const table = container.querySelector('table');
+    if (!table) {
+        container.innerHTML = '<table class="complex-table"><tbody></tbody></table>';
+    }
+    const tbody = table.querySelector('tbody');
+    const idx = tbody.children.length;
+    const tr = document.createElement('tr');
+    tr.dataset.row = idx;
+
+    const fields = getFieldsForTable(tbl);
+    fields.forEach(f => {
+        const td = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = tbl + '_' + idx + '_' + f;
+        td.appendChild(input);
+        tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+}
+
+function getFieldsForTable(tbl) {
+    const map = {
+        logit_biases: ['token_id', 'bias_value'],
+        lora_adapters: ['path', 'scale'],
+        control_vectors: ['path', 'scale', 'layer_range_start', 'layer_range_end'],
+        override_kv: ['key_name', 'key_type', 'key_value'],
+        override_tensors: ['tensor_pattern', 'buffer_type'],
+        dry_sequence_breakers: ['breaker_char'],
+    };
+    return map[tbl] || [];
+}
+</script>
+{% endblock %}

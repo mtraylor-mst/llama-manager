@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}llama.cpp Config Manager{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="topnav">
+        <a href="{{ url_for('index') }}" class="brand">llama.cpp Manager</a>
+        <div class="nav-right">
+            {% if server_status.running %}
+            <span class="status running" hx-get="{{ url_for('server.status') }}" hx-trigger="every 10s" hx-swap="outerHTML">
+                ● Running
+                <button hx-post="{{ url_for('server.import_config') }}" hx-target="#flash-area" class="btn btn-sm btn-import">Import Config</button>
+                <button hx-post="{{ url_for('server.stop') }}" hx-target="#flash-area" class="btn btn-sm btn-danger">Stop</button>
+            </span>
+            {% else %}
+            <span class="status stopped">● Stopped</span>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        <div id="flash-area">
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Version History - {{ config.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Version History: {{ config.name }}</h1>
+    <a href="{{ url_for('configs.view', config_id=config.id) }}" class="btn">Back to Config</a>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Created</th>
+            <th>Comments</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in versions %}
+        <tr>
+            <td>{{ v.version_number }}</td>
+            <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ (v.comments or '')[:80] }}</td>
+            <td class="actions">
+                <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn btn-sm">Edit</a>
+                {% if server_status.running and v.id != latest_version_id %}
+                <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    <button type="submit" class="btn btn-sm btn-warning">Restart (Stops Current)</button>
+                </form>
+                {% elif not server_status.running %}
+                <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    <button type="submit" class="btn btn-sm btn-success">Run</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

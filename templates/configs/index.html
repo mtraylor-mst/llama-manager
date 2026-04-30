@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Configs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Saved Configs</h1>
+    <a href="{{ url_for('configs.new') }}" class="btn btn-primary">+ New Config</a>
+</div>
+
+{% if configs %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Versions</th>
+            <th>Updated</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cfg in configs %}
+        <tr>
+            <td><a href="{{ url_for('configs.view', config_id=cfg.id) }}">{{ cfg.name }}</a></td>
+            <td>{{ (cfg.description or '')[:80] }}</td>
+            <td>—</td>
+            <td>{{ cfg.updated_at.strftime('%Y-%m-%d %H:%M') if cfg.updated_at else '' }}</td>
+            <td class="actions">
+                <a href="{{ url_for('configs.view', config_id=cfg.id) }}" class="btn btn-sm">View</a>
+                <a href="{{ url_for('configs.edit', config_id=cfg.id) }}" class="btn btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('configs.delete', config_id=cfg.id) }}" class="inline"
+                      onsubmit="return confirm('Delete this config and all versions?')">
+                    <button type="submit" class="btn btn-sm btn-danger">Del</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">No configs yet. <a href="{{ url_for('configs.new') }}">Create one</a>.</p>
+{% endif %}
+{% endblock %}
