@@ -73,6 +73,29 @@ def fork_edit(version_id):
     return _edit_form(fake_version, None, data=source_data, is_fork=True)
 
 
+@bp.route('/version/<int:version_id>/delete', methods=['POST'])
+def delete(version_id):
+    from models.configs import get_version, delete_version
+    from services.screen_manager import get_running_version_id
+
+    version = get_version(version_id)
+    if not version:
+        flash('Version not found', 'error')
+        return redirect(url_for('index'))
+
+    running_vid = get_running_version_id()
+    if running_vid == version_id:
+        flash('Cannot delete the currently running version. Stop it first.', 'error')
+        return redirect(url_for('configs.view', config_id=version['config_id']))
+
+    if not delete_version(version_id):
+        flash('Failed to delete version', 'error')
+        return redirect(url_for('configs.view', config_id=version['config_id']))
+
+    flash(f'Version {version["version_number"]} deleted', 'success')
+    return redirect(url_for('configs.view', config_id=version['config_id']))
+
+
 def _save_version_data(version_id, config_id):
     from models.configs import CATEGORIES, COMPLEX_TABLES, save_category, save_complex_table
 

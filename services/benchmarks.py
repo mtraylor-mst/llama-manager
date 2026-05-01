@@ -131,7 +131,7 @@ def benchmark_version(version_id):
     host, port = get_server_host_port(data)
 
     # Snapshot VRAM before
-    vram_before = get_vram()
+    get_vram()
 
     # Run completion benchmark
     result = run_benchmark(host, port)

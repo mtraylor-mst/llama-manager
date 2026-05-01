@@ -1,4 +1,3 @@
-from models.base import get_conn
 from config import SERVER_BINARY
 
 
@@ -439,7 +438,7 @@ NEGATIVE_BOOL_FIELDS = {
 
 def build_command(version_id):
     """Build the full llama-server command line from a version's data."""
-    from models.configs import get_all_version_data, get_category, get_complex_table
+    from models.configs import get_all_version_data
 
     parts = [SERVER_BINARY]
     data = get_all_version_data(version_id)

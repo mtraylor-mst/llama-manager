@@ -1,5 +1,4 @@
 import subprocess
-import shlex
 from config import SCREEN_PREFIX
 
 
@@ -90,7 +89,7 @@ def stop():
         return {'success': True, 'message': 'No session running'}
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             ['screen', '-S', screen_name, '-X', 'quit'],
             capture_output=True, text=True, timeout=10
         )

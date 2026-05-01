@@ -454,7 +454,7 @@ def import_running_config(config_name=None):
         signature[col] = coerce_value(col, val)
 
     # Look for existing config matching this model name
-    from models.configs import get_all_configs, get_all_versions, get_latest_version, \
+    from models.configs import get_all_configs, get_latest_version, \
         create_config, create_version, save_category
 
     existing_config = None

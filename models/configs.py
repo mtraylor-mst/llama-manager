@@ -90,6 +90,15 @@ def get_latest_version(config_id):
             return cur.fetchone()
 
 
+def delete_version(version_id):
+    """Delete a version. CASCADE handles all child tables."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM config_versions WHERE id = %s', (version_id,))
+            conn.commit()
+            return cur.rowcount > 0
+
+
 def get_all_versions(config_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -127,7 +136,7 @@ def create_version(config_id, comments=''):
 
 def duplicate_version(source_version_id, config_id, comments=''):
     """Copy all category data from source version to a new version."""
-    vn = next_version_number(config_id)
+    next_version_number(config_id)
     version_id = create_version(config_id, comments)
 
     with get_conn() as conn:

@@ -83,7 +83,7 @@ def stream_logs():
                 from services.screen_manager import get_log_file, is_running
                 log_file = get_log_file()
                 if not log_file or not is_running():
-                    yield f'data: [no process running]\n\n'
+                    yield 'data: [no process running]\n\n'
                     time.sleep(3)
                     continue
 
@@ -133,7 +133,7 @@ def import_config():
                     f'✓ Imported <strong>{len(parsed)}</strong> flags from running server. '
                     f'<a href="{url_for("configs.view", config_id=cfg_id)}">View & edit config →</a></div>')
         if not created_new:
-            flash(f'Settings unchanged (matches latest version)', 'warning')
+            flash('Settings unchanged (matches latest version)', 'warning')
             return redirect(url_for('configs.view', config_id=cfg_id))
         flash(f'Config imported ({len(parsed)} flags)', 'success')
         return redirect(url_for('configs.view', config_id=cfg_id))
