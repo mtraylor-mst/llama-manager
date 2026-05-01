@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Version {{ version.version_number }} - Edit{% endblock %}
+{% block title %}{% if is_fork %}New Version (Fork) - Edit{% else %}Version {{ version.version_number }} - Edit{% endif %}{% endblock %}
 
 {% block content %}
-<h1>Edit Version {{ version.version_number }}</h1>
+<h1>{% if is_fork %}New Version (Fork){% else %}Edit Version {{ version.version_number }}{% endif %}</h1>
 <p class="meta">Config: <a href="{{ url_for('configs.view', config_id=version.config_id) }}">{{ version.config_name }}</a></p>
 
-{% if running_version and running_version.id != version.id %}
+{% if not is_fork and running_version and running_version.id != version.id %}
 <div class="running-banner">
     <span class="status running">● Running</span>
     <span>Version {{ running_version.version_number }} is currently running, not this one.</span>
@@ -16,7 +16,7 @@
         <a href="{{ url_for('versions.edit', version_id=running_version.id) }}" class="btn btn-sm">Edit Running Version</a>
     </div>
 </div>
-{% elif running_version and running_version.id == version.id %}
+{% elif not is_fork and running_version and running_version.id == version.id %}
 <div class="running-banner running-is-this">
     <span class="status running">● Running</span>
     <span>This version is currently running.</span>

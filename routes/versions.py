@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, session
 
 bp = Blueprint('versions', __name__)
 
@@ -40,69 +40,142 @@ def edit_latest(config_id):
 
 @bp.route('/version/<int:version_id>/edit', methods=['GET', 'POST'])
 def edit(version_id):
-    from models.configs import get_version
+    from models.configs import get_version, get_all_version_data
     version = get_version(version_id)
     if not version:
         flash('Version not found', 'error')
         return redirect(url_for('index'))
-    return _edit_form(version, None)
+    data = get_all_version_data(version_id)
+    return _edit_form(version, None, data=data)
 
 
-def _edit_form(version, config):
-    from models.configs import CATEGORIES, COMPLEX_TABLES, get_all_version_data, save_category, save_complex_table
+@bp.route('/version/<int:version_id>/fork-edit', methods=['GET', 'POST'])
+def fork_edit(version_id):
+    from models.configs import get_version, get_all_version_data
+    version = get_version(version_id)
+    if not version:
+        flash('Version not found', 'error')
+        return redirect(url_for('index'))
+
+    source_data = get_all_version_data(version_id)
+    session['fork_source_version_id'] = version_id
+    session['fork_config_id'] = version['config_id']
+    session.pop('fork_version_id', None)
+
+    fake_version = {
+        'id': None,
+        'config_id': version['config_id'],
+        'config_name': version['config_name'],
+        'version_number': '(New)',
+        'comments': '',
+        'status': None,
+    }
+    return _edit_form(fake_version, None, data=source_data, is_fork=True)
+
+
+def _save_version_data(version_id, config_id):
+    from models.configs import CATEGORIES, COMPLEX_TABLES, save_category, save_complex_table
+
+    # Save comments and status
+    from models.base import get_conn
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            status_val = request.form.get('status') or None
+            cur.execute(
+                'UPDATE config_versions SET comments = %s, status = %s WHERE id = %s',
+                (request.form.get('comments', ''), status_val, version_id),
+            )
+            conn.commit()
+
+    # Save each category
+    for cat in CATEGORIES:
+        prefix = f'{cat}_'
+        data = {}
+        for key, val in request.form.items():
+            if key.startswith(prefix):
+                col = key[len(prefix):]
+                if val == '' or val == 'None':
+                    data[col] = None
+                elif key.endswith('_bool') or col in _BOOL_COLS.get(cat, set()):
+                    data[col] = 1 if val == '1' or val == 'on' else 0
+                else:
+                    data[col] = val
+        if data:
+            save_category(version_id, cat, data)
+
+    # Save complex tables
+    for tbl in COMPLEX_TABLES:
+        rows = []
+        ids_key = request.form.get(f'{tbl}_ids')
+        if ids_key:
+            row_ids = ids_key.split(',')
+            for rid in row_ids:
+                rid = rid.strip()
+                if not rid:
+                    continue
+                row = {}
+                for key, val in request.form.items():
+                    if key.startswith(f'{tbl}_{rid}_'):
+                        col = key[len(f'{tbl}_{rid}_'):]
+                        row[col] = val if val else None
+                if row:
+                    rows.append(row)
+        save_complex_table(version_id, tbl, rows)
+
+
+def _edit_form(version, config, data=None, is_fork=False):
+    from models.configs import CATEGORIES, COMPLEX_TABLES, get_all_version_data, create_version
 
     if request.method == 'POST':
-        # Save comments and status
-        from models.base import get_conn
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                status_val = request.form.get('status') or None
-                cur.execute(
-                    'UPDATE config_versions SET comments = %s, status = %s WHERE id = %s',
-                    (request.form.get('comments', ''), status_val, version['id']),
-                )
+        if is_fork:
+            # This is a fork -- create the version now on save
+            source_vid = session.pop('fork_source_version_id', None)
+            config_id = session.pop('fork_config_id', None)
+            new_vid = create_version(config_id, request.form.get('comments', ''))
+            session['fork_version_id'] = new_vid
+
+            # Copy data from source version to the new version
+            from models.base import get_conn
+            source_data = get_all_version_data(source_vid)
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    for cat in CATEGORIES:
+                        table = f'v_{cat}'
+                        row = source_data.get(cat, {})
+                        if row:
+                            row.pop('version_id', None)
+                            cols = ', '.join(row.keys())
+                            placeholders = ', '.join(['%s'] * len(row))
+                            cur.execute(
+                                f'INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})',
+                                (new_vid,) + tuple(row.values()),
+                            )
+                    for tbl in COMPLEX_TABLES:
+                        table = f'v_{tbl}'
+                        rows = source_data.get(tbl, [])
+                        for row in rows:
+                            row.pop('id', None)
+                            row.pop('version_id', None)
+                            cols = ', '.join(row.keys())
+                            placeholders = ', '.join(['%s'] * len(row))
+                            cur.execute(
+                                f'INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})',
+                                (new_vid,) + tuple(row.values()),
+                            )
                 conn.commit()
 
-        # Save each category
-        for cat in CATEGORIES:
-            prefix = f'{cat}_'
-            data = {}
-            for key, val in request.form.items():
-                if key.startswith(prefix):
-                    col = key[len(prefix):]
-                    # Convert empty strings to None
-                    if val == '' or val == 'None':
-                        data[col] = None
-                    elif key.endswith('_bool') or col in _BOOL_COLS.get(cat, set()):
-                        data[col] = 1 if val == '1' or val == 'on' else 0
-                    else:
-                        data[col] = val
-            if data:
-                save_category(version['id'], cat, data)
+            _save_version_data(new_vid, config_id)
+            flash('Version saved', 'success')
+            return redirect(url_for('configs.view', config_id=config_id))
+        else:
+            # Existing version edit
+            _save_version_data(version['id'], version['config_id'])
+            flash('Version saved', 'success')
+            return redirect(url_for('configs.view', config_id=version['config_id']))
 
-        # Save complex tables
-        for tbl in COMPLEX_TABLES:
-            rows = []
-            ids_key = request.form.get(f'{tbl}_ids')
-            if ids_key:
-                row_ids = ids_key.split(',')
-                for rid in row_ids:
-                    rid = rid.strip()
-                    if not rid:
-                        continue
-                    row = {}
-                    for key, val in request.form.items():
-                        if key.startswith(f'{tbl}_{rid}_'):
-                            col = key[len(f'{tbl}_{rid}_'):]
-                            row[col] = val if val else None
-                    if row:
-                        rows.append(row)
-            save_complex_table(version['id'], tbl, rows)
+    if data is None:
+        data = get_all_version_data(version['id'])
 
-        flash('Version saved', 'success')
-        return redirect(url_for('configs.view', config_id=version['config_id']))
-
-    data = get_all_version_data(version['id'])
     categories = CATEGORIES
     complex_tables = COMPLEX_TABLES
 
@@ -128,19 +201,8 @@ def _edit_form(version, config):
         category_labels=CATEGORY_LABELS,
         running_version_id=running_vid,
         running_version=running_version,
+        is_fork=is_fork,
     )
-
-
-@bp.route('/version/<int:version_id>/fork-edit', methods=['GET'])
-def fork_edit(version_id):
-    from models.configs import get_version, duplicate_version
-    version = get_version(version_id)
-    if not version:
-        flash('Version not found', 'error')
-        return redirect(url_for('index'))
-
-    new_vid = duplicate_version(version_id, version['config_id'], '')
-    return redirect(url_for('versions.edit', version_id=new_vid))
 
 
 @bp.route('/version/<int:version_id>/duplicate', methods=['POST'])
