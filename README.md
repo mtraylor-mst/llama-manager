@@ -31,6 +31,7 @@ mysql -h $HOST -u $USER -p llama_configs < schema.sql
 | `LLAMA_MODEL_DIR` | `~/.cache/huggingface/hub/` | Default model directory |
 | `LLAMA_SCREEN_PREFIX` | `llama-manager` | Screen session name prefix |
 | `LLAMA_SERVER_BINARY` | `/usr/local/bin/llama-server` | Path to llama.cpp server binary |
+| `LLAMA_SECRET_KEY` | `change-me-in-production` | Flask secret key for sessions |
 
 ## Usage
 

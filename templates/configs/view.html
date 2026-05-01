@@ -51,15 +51,15 @@
 
 {% if metrics %}
 <div class="card" style="margin-top:1rem">
-    <h3>Benchmark Results</h3>
+    <h3>Benchmark Results ({{ metrics|length }})</h3>
     <table class="table">
         <thead>
             <tr><th>Recorded</th><th>Load Time</th><th>TPS</th><th>VRAM</th><th>CPU</th><th>Notes</th></tr>
         </thead>
         <tbody id="benchmark-table">
-            {% for m in metrics %}
+            {% for m in metrics[:2] %}
             <tr>
-                <td>{{ m.recorded_at.strftime('%H:%M') if m.recorded_at else '' }}</td>
+                <td>{{ m.recorded_at.strftime('%Y-%m-%d %H:%M') if m.recorded_at else '' }}</td>
                 <td>{{ '%.1fs'|format(m.load_time_sec) if m.load_time_sec else '-' }}</td>
                 <td>{{ '%.1f'|format(m.tps) if m.tps else '-' }}</td>
                 <td>{{ m.vram_used_mb }} MB{% if m.vram_used_mb %}{% endif %}</td>
@@ -69,6 +69,28 @@
             {% endfor %}
         </tbody>
     </table>
+    {% if metrics|length > 2 %}
+    <details>
+        <summary>Show all {{ metrics|length }} results</summary>
+        <table class="table" style="margin-top:0.5rem">
+            <thead>
+                <tr><th>Recorded</th><th>Load Time</th><th>TPS</th><th>VRAM</th><th>CPU</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+                {% for m in metrics[2:] %}
+                <tr>
+                    <td>{{ m.recorded_at.strftime('%Y-%m-%d %H:%M') if m.recorded_at else '' }}</td>
+                    <td>{{ '%.1fs'|format(m.load_time_sec) if m.load_time_sec else '-' }}</td>
+                    <td>{{ '%.1f'|format(m.tps) if m.tps else '-' }}</td>
+                    <td>{{ m.vram_used_mb }} MB{% if m.vram_used_mb %}{% endif %}</td>
+                    <td>{{ '%.0f%%'|format(m.peak_cpu_pct) if m.peak_cpu_pct else '-' }}</td>
+                    <td>{{ (m.notes or '')[:60] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </details>
+    {% endif %}
 </div>
 {% endif %}
 

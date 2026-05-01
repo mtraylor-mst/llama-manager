@@ -1,4 +1,5 @@
 """Jinja2 template utility functions for rendering form fields."""
+from html import escape as hescape
 
 # Field definitions: category -> list of (column, label, field_type, options/hint)
 CATEGORY_FIELDS = {
@@ -101,6 +102,7 @@ CATEGORY_FIELDS = {
     ],
     'chat_templates': [
         ('chat_template', 'Chat Template', 'select', [('auto', 'auto (from model)'), ('chatml', 'chatml'), ('llama3', 'llama3'), ('mistral-v3', 'mistral-v3'), ('deepseek', 'deepseek'), ('gemma', 'gemma'), ('phi3', 'phi3')]),
+        ('chat_template_kwargs', 'Chat Template Kwargs', 'text', 'JSON string, e.g. {"preserve_thinking":true}'),
         ('jinja', 'Use Jinja', 'bool', None),
         ('reasoning', 'Reasoning', 'select', [('auto', 'auto'), ('on', 'on'), ('off', 'off')]),
         ('reasoning_format', 'Reasoning Format', 'select', [('auto', 'auto'), ('none', 'none'), ('deepseek', 'deepseek')]),
@@ -166,7 +168,7 @@ def render_field(category, col, value):
     fields = CATEGORY_FIELDS.get(category, [])
     field_def = next((f for f in fields if f[0] == col), None)
     if not field_def:
-        return f'<input type="text" name="{category}_{col}" value="{value or ""}">'
+        return f'<input type="text" name="{category}_{col}" value="{hescape(str(value) if value else "", quote=True)}">'
 
     _, _, ftype, hint = field_def
     name = f'{category}_{col}'
@@ -191,7 +193,7 @@ def render_field(category, col, value):
                 f'placeholder="{val_display if val_display else ""}">')
 
     else:
-        val = value if value is not None else ''
+        val = hescape(str(value) if value is not None else '', quote=True)
         ftype_html = 'text' if ftype in ('text',) else ftype
         return f'<input type="{ftype_html}" name="{name}" value="{val}">'
 
@@ -214,7 +216,7 @@ def render_complex(tbl, rows):
     for i, row in enumerate(rows):
         html += f'<tr data-row="{i}">'
         for col, _, ftype in fields:
-            val = row.get(col, '') or ''
+            val = hescape(str(row.get(col, '') or ''), quote=True)
             html += f'<td><input type="text" name="{tbl}_{i}_{col}" value="{val}"></td>'
         html += '</tr>\n'
 
