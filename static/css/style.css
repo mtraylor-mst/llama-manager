@@ -261,3 +261,83 @@ a:hover { color: var(--primary-hover); }
     white-space: pre-wrap;
     word-break: break-all;
 }
+
+/* Nav link */
+.nav-link {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-left: 1rem;
+}
+.nav-link:hover {
+    color: var(--text);
+}
+
+/* Common options checkbox in params table */
+.common-check {
+    width: 30px !important;
+    text-align: center;
+    padding: 0.3rem !important;
+}
+.common-toggle {
+    cursor: pointer;
+}
+
+/* Common options list page */
+.common-options-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.common-option-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.common-option-item:last-child {
+    border-bottom: none;
+}
+.drag-handle {
+    color: var(--text-dim);
+    cursor: grab;
+    font-size: 1rem;
+    user-select: none;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+.option-label {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+.option-label:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+.option-meta {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+.option-meta code {
+    background: var(--bg);
+    padding: 0.1rem 0.3rem;
+    border-radius: 2px;
+    font-size: 0.75rem;
+}
+
+/* Sortable.js */
+.sortable-ghost {
+    opacity: 0.4;
+    background: var(--primary);
+}
+.sortable-drag {
+    opacity: 0.8;
+}

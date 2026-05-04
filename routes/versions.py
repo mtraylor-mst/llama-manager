@@ -3,6 +3,63 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 bp = Blueprint('versions', __name__)
 
 
+def get_common_option_set():
+    """Return a set of (category, column_name) tuples for all common options."""
+    try:
+        from models.configs import get_common_options
+        options = get_common_options()
+        return {(opt['category'], opt['column_name']) for opt in options}
+    except Exception:
+        return set()
+
+
+def get_common_options_list():
+    """Return list of common option dicts with resolved labels."""
+    try:
+        from models.configs import get_common_options
+        from template_utils import CATEGORY_FIELDS
+        options = get_common_options()
+        result = []
+        for opt in options:
+            fields = CATEGORY_FIELDS.get(opt['category'], [])
+            field_def = next((f for f in fields if f[0] == opt['column_name']), None)
+            label = opt['custom_label'] or (field_def[1] if field_def else opt['column_name'])
+            result.append({
+                'id': opt['id'],
+                'category': opt['category'],
+                'column_name': opt['column_name'],
+                'label': label,
+            })
+        return result
+    except Exception:
+        return []
+
+
+def get_common_options_grouped():
+    """Return common options grouped by category label."""
+    try:
+        from models.configs import get_common_options
+        from template_utils import CATEGORY_FIELDS
+        options = get_common_options()
+        groups = {}
+        for opt in options:
+            cat_label = CATEGORY_LABELS.get(opt['category'], opt['category'])
+            if cat_label not in groups:
+                groups[cat_label] = {'label': cat_label, 'fields': []}
+            fields = CATEGORY_FIELDS.get(opt['category'], [])
+            field_def = next((f for f in fields if f[0] == opt['column_name']), None)
+            label = opt['custom_label'] or (field_def[1] if field_def else opt['column_name'])
+            groups[cat_label]['fields'].append({
+                'id': opt['id'],
+                'category': opt['category'],
+                'column_name': opt['column_name'],
+                'label': label,
+            })
+        return list(groups.values())
+    except Exception:
+        return []
+
+
 @bp.route('/config/<int:config_id>/versions')
 def history(config_id):
     from models.configs import get_config, get_all_versions, get_latest_version
@@ -225,6 +282,9 @@ def _edit_form(version, config, data=None, is_fork=False):
         running_version_id=running_vid,
         running_version=running_version,
         is_fork=is_fork,
+        common_option_ids=get_common_option_set(),
+        common_options_list=get_common_options_list(),
+        common_options_grouped=get_common_options_grouped(),
     )
 
 

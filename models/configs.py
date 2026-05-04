@@ -270,3 +270,63 @@ def get_performance_metrics(version_id):
                 (version_id,),
             )
             return cur.fetchall()
+
+
+def get_common_options():
+    """Get all common options ordered by display_order."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT * FROM common_options ORDER BY display_order')
+            return cur.fetchall()
+
+
+def is_common_option(category, column_name):
+    """Check if a field is marked as a common option."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT id FROM common_options WHERE category = %s AND column_name = %s',
+                (category, column_name),
+            )
+            return cur.fetchone() is not None
+
+
+def add_common_option(category, column_name, custom_label=None):
+    """Add a field to common options. Returns True if added, False if already exists."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT MAX(display_order) AS max_order FROM common_options'
+            )
+            max_order = cur.fetchone()['max_order'] or 0
+            try:
+                cur.execute(
+                    'INSERT INTO common_options (category, column_name, display_order, custom_label) '
+                    'VALUES (%s, %s, %s, %s)',
+                    (category, column_name, max_order + 1, custom_label),
+                )
+                conn.commit()
+                return True
+            except Exception:
+                return False
+
+
+def remove_common_option(option_id):
+    """Remove a common option by ID."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute('DELETE FROM common_options WHERE id = %s', (option_id,))
+            conn.commit()
+            return cur.rowcount > 0
+
+
+def reorder_common_options(order_list):
+    """Bulk update display_order. order_list is a list of IDs in desired order."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for idx, opt_id in enumerate(order_list):
+                cur.execute(
+                    'UPDATE common_options SET display_order = %s WHERE id = %s',
+                    (idx, opt_id),
+                )
+            conn.commit()
