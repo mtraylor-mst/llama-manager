@@ -39,6 +39,9 @@ def create_app():
     from routes.api import bp as api_bp
     app.register_blueprint(api_bp)
 
+    from routes.common import bp as common_bp
+    app.register_blueprint(common_bp)
+
     @app.route('/')
     def index():
         from models.configs import get_all_configs

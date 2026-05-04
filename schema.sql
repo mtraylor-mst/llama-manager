@@ -291,6 +291,16 @@ CREATE TABLE IF NOT EXISTS v_advanced (
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
 );
 
+-- Common Options (user-curated list of frequently used fields)
+CREATE TABLE IF NOT EXISTS common_options (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(50) NOT NULL,
+    column_name VARCHAR(100) NOT NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    custom_label VARCHAR(255),
+    UNIQUE KEY uniq_common_field (category, column_name)
+);
+
 -- Complex value: Logit Biases
 CREATE TABLE IF NOT EXISTS v_logit_biases (
     id INT AUTO_INCREMENT PRIMARY KEY,
