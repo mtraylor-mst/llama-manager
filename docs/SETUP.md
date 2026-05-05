@@ -20,11 +20,6 @@ The application uses a MySQL/MariaDB backend to store configurations, versions, 
 `llama-manager` is a management layer for the `llama.cpp` server. You must have the `llama-server` binary available on your system path or know its absolute location.
 - **Build from source**: Follow the instructions in the [official llama.cpp repository](https://github.com/ggerganov/llama.cpp).
 
-### 4. Process Management (`Popen`)
-`llama-manager` uses `Popen` to manage server processes in the background, allowing you to view live logs via the web interface.
-- **Linux**: Install via `sudo apt install Popen` or your distribution's equivalent.
-- **macOS**: `Popen` is typically pre-installed. You can verify this by running `Popen --version` in your terminal.
-
 ---
 
 ## Installation Steps
@@ -39,8 +34,8 @@ cd llama-manager
 It is recommended to use a virtual environment:
 ```bash
 # Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On macOS/Linux
+python3 -m venv .venv
+source .venv/bin/activate  # On macOS/Linux
 
 # Install required Python packages
 pip install -r requirements.txt
@@ -57,18 +52,21 @@ mysql -h $HOST -u $USER -p llama_configs < schema.sql
 
 ## Configuration
 
-`llama-manager` is configured primarily through environment variables. You can set these in your shell or via a `.env` file.
+`llama-manager` is configured primarily through environment variables. You can set these in your shell or via a `.env` file (loaded automatically by `python-dotenv`).
 
 | Variable | Default | Description |
 |---|---|---|
 | `LLAMA_DB_HOST` | `127.0.0.1` | Database host |
-| `LLAMA_DB_USER` | `llama_mgr` | Database user |
-| `LLAMA_DB_PASS` | `llama_mgr` | Database password |
+| `LLAMA_DB_USER` | `username` | Database user |
+| `LLAMA_DB_PASS` | `password` | Database password |
 | `LLAMA_DB_NAME` | `llama_configs` | Database name |
-| `LLAMA_MODEL_DIR` | `~/.cache/huggingface/hub/` | Default directory for GGUF models |
-| `LLAMA_SCREEN_PREFIX` | `llama-manager` | Prefix for managed `Popen` sessions |
+| `LLAMA_MODEL_DIR` | `/home/mtraylor/.cache/huggingface/hub/` | Default directory for GGUF models |
 | `LLAMA_SERVER_BINARY` | `/usr/local/bin/llama-server` | Path to the `llama-server` binary |
-| `LLAMA_SECRET_KEY` | `change-me-in-production` | Flask secret key for secure sessions |
+| `LLAMA_SECRET_KEY` | *(random)* | Flask secret key for secure sessions |
+| `AUTH_ENABLED` | `false` | Enable HTTP Basic Auth |
+| `AUTH_USER` | | Auth username |
+| `AUTH_PASSWORD` | | Auth password |
+| `DEBUG` | `false` | Flask debug mode |
 
 ---
 
@@ -80,4 +78,4 @@ Once setup is complete, you can start the manager using:
 python run.py
 ```
 
-The interface will be available at `http://127.0.0.1:5000` (unless configured otherwise).
+The interface will be available at `http://127.0.0.1:8081`.

@@ -46,7 +46,7 @@ Settings are organized into logical categories to make tuning easier:
 Once a configuration is set, you can use the manager to control the actual server processes.
 
 ### Launching and Stopping
-*   **Start**: From the configuration view or the main dashboard, click **Start** on the desired version. The server will run in a background `Popen` session.
+*   **Start**: From the configuration view or the main dashboard, click **Start** on the desired version. The server runs as a background subprocess with PID tracking (`/tmp/.llama-manager.pid`).
 *   **Stop**: Click **Stop** to terminate the current running session.
 
 ### Real-Time Monitoring
@@ -57,4 +57,4 @@ Once a configuration is set, you can use the manager to control the actual serve
 To evaluate how a change affects performance:
 1.  Select a version.
 2.  Run the **Benchmark** command.
-3.  The system will track metrics such as **Tokens Per Second (TPS)**, load time, and VRAM usage, which are then stored in the version's history for comparison.
+3.  The system will track metrics such as **Tokens Per Second (TPS)**, VRAM usage (MB), peak CPU %, and request duration, which are then stored in the version's history for comparison.
