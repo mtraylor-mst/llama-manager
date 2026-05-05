@@ -1,8 +1,11 @@
+import logging
 from flask import Blueprint, request, jsonify, flash, redirect, url_for, Response, stream_with_context
 import time
 import html as html_module
+from utils.rate_limit import rate_limit
 
 bp = Blueprint('server', __name__)
+logger = logging.getLogger(__name__)
 
 
 @bp.route('/server/status')
@@ -22,7 +25,8 @@ def status():
         if st['running']:
             ver_label = ''
             if running_ver_info:
-                ver_label = f' <a href="{url_for("versions.edit", version_id=running_ver_info["id"])}">v{running_ver_info["version_number"]} ({running_ver_info["config_name"]})</a>'
+                safe_name = html_module.escape(running_ver_info['config_name'])
+                ver_label = f' <a href="{url_for("versions.edit", version_id=running_ver_info["id"])}">v{running_ver_info["version_number"]} ({safe_name})</a>'
             return (f'<span class="status running" hx-get="{url_for("server.status")}" '
                     f'hx-trigger="every 10s" hx-swap="outerHTML">'
                     f'● Running{ver_label} '
@@ -36,12 +40,14 @@ def status():
 
 
 @bp.route('/server/stop', methods=['POST'])
+@rate_limit(max_calls=3, period=60)
 def stop():
     from services.screen_manager import stop
     result = stop()
     if request.headers.get('HX-Request'):
         cls = 'success' if result['success'] else 'error'
-        return f'<div class="alert alert-{cls}">{result["message"] if not result["success"] else "Server stopped"}</div>'
+        msg = html_module.escape(result['message']) if not result['success'] else 'Server stopped'
+        return f'<div class="alert alert-{cls}">{msg}</div>'
     if result['success']:
         flash('Server stopped', 'success')
     else:
@@ -50,14 +56,15 @@ def stop():
 
 
 @bp.route('/server/start/<int:version_id>', methods=['POST'])
+@rate_limit(max_calls=1, period=30)
 def start(version_id):
     from services.screen_manager import start
     from services.command_builder import build_command
-    cmd = build_command(version_id)
-    result = start(cmd, version_id=version_id)
+    args = build_command(version_id)
+    result = start(args, version_id=version_id)
     if request.headers.get('HX-Request'):
         cls = 'success' if result['success'] else 'error'
-        msg = f"Server started (v{version_id})" if result['success'] else result['message']
+        msg = f'Server started (v{version_id})' if result['success'] else html_module.escape(result['message'])
         return f'<div class="alert alert-{cls}">{msg}</div>'
     if result['success']:
         flash(f'Server started (v{version_id})', 'success')
@@ -80,23 +87,32 @@ def stream_logs():
         import subprocess
         while True:
             try:
-                from services.screen_manager import get_log_file, is_running
-                log_file = get_log_file()
-                if not log_file or not is_running():
+                from services.screen_manager import get_log_file, get_running_version_id, is_running
+                if not is_running():
                     yield 'data: [no process running]\n\n'
                     time.sleep(3)
                     continue
+                vid = get_running_version_id()
+                log_file = get_log_file(vid)
 
                 proc = subprocess.Popen(
                     ['tail', '-fn10', log_file],
                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
                 )
-                while True:
-                    line = proc.stdout.readline()
-                    if not line:
-                        break
-                    safe = html_module.escape(line.rstrip('\n'))
-                    yield f'data: {safe}\n\n'
+                try:
+                    while True:
+                        line = proc.stdout.readline()
+                        if not line:
+                            break
+                        safe = html_module.escape(line.rstrip('\n'))
+                        yield f'data: {safe}\n\n'
+                finally:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
             except (subprocess.CalledProcessError, FileNotFoundError, PermissionError,
                     subprocess.TimeoutExpired, IOError):
                 pass
@@ -112,6 +128,7 @@ def stream_logs():
 
 
 @bp.route('/version/<int:version_id>/benchmark', methods=['POST'])
+@rate_limit(max_calls=1, period=120)
 def benchmark(version_id):
     from services.benchmarks import benchmark_version
     result = benchmark_version(version_id)
@@ -138,7 +155,8 @@ def import_config():
         flash(f'Config imported ({len(parsed)} flags)', 'success')
         return redirect(url_for('configs.view', config_id=cfg_id))
     except Exception as e:
+        logger.error('Error importing config', exc_info=True)
         if request.headers.get('HX-Request'):
-            return f'<div class="alert alert-error">Import failed: {e}</div>'
-        flash(str(e), 'error')
+            return '<div class="alert alert-error">Import failed — check server logs for details.</div>'
+        flash('Import failed — check server logs for details.', 'error')
         return redirect(request.referrer or url_for('index'))

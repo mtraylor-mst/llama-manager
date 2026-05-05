@@ -16,18 +16,20 @@
     {% for opt in options %}
     <div class="common-option-item" data-id="{{ opt.id }}" draggable="true">
         <span class="drag-handle">&#9776;</span>
-        <form method="POST" action="{{ url_for('common.update_label', option_id=opt.id) }}" class="inline-label-form">
+<form method="POST" action="{{ url_for('common.update_label', option_id=opt.id) }}" class="inline-label-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text"
-                   class="option-label"
-                   name="custom_label"
-                   value="{{ opt.label }}"
-                   placeholder="{{ opt.column_name }}"
-                   title="Click to edit label (leave empty for default)">
+                    class="option-label"
+                    name="custom_label"
+                    value="{{ opt.label }}"
+                    placeholder="{{ opt.column_name }}"
+                    title="Click to edit label (leave empty for default)">
         </form>
         <span class="option-meta">
             {{ category_labels.get(opt.category, opt.category) }} &middot; <code>{{ opt.column_name }}</code>
         </span>
         <form method="POST" action="{{ url_for('common.remove', option_id=opt.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-sm btn-danger" title="Remove from common options">&times;</button>
         </form>
     </div>
@@ -45,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
         dragClass: 'sortable-drag',
         onEnd: function() {
             const order = Array.from(el.children).map(child => child.dataset.id);
-            fetch('{{ url_for("common.reorder") }}', {
+            csrfSafeFetch('{{ url_for("common.reorder") }}', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({order: order}),

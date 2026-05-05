@@ -11,6 +11,7 @@
     <span>Version {{ running_version.version_number }} is currently running, not this one.</span>
     <div class="running-banner-actions">
         <form method="POST" action="{{ url_for('server.start', version_id=version.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-sm btn-warning">Switch to This Version</button>
         </form>
         <a href="{{ url_for('versions.edit', version_id=running_version.id) }}" class="btn btn-sm">Edit Running Version</a>
@@ -27,8 +28,9 @@
 {% endif %}
 
 <form method="POST" class="form-panel form-long" id="version-form">
-    <div class="form-group">
-        <label>Comments / Notes</label>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label>Comments / Notes</label>
         <textarea name="comments" rows="2" placeholder="TPS, OOM, issues, observations...">{{ version.comments or '' }}</textarea>
     </div>
 
@@ -177,7 +179,7 @@ document.querySelectorAll('.common-toggle').forEach(cb => {
         const cat = this.dataset.category;
         const col = this.dataset.column;
         const add = this.checked;
-        fetch('{{ url_for("common.toggle") }}', {
+        csrfSafeFetch('{{ url_for("common.toggle") }}', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({category: cat, column_name: col, add: add}),

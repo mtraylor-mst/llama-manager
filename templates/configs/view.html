@@ -36,6 +36,7 @@
         {% endif %}
         <a href="{{ url_for('versions.fork_edit', version_id=featured.id) }}" class="btn btn-primary">Fork &amp; Edit</a>
         <form method="POST" action="{{ url_for('server.start', version_id=featured.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             {% if running_version_id == featured.id %}
             <button type="submit" class="btn btn-warning">Restart</button>
             {% elif server_status.running %}
@@ -144,6 +145,7 @@
                 <span class="status running" style="font-size:0.8rem">● Running</span>
                 {% else %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     {% if server_status.running %}
                     <button type="submit" class="btn btn-sm btn-warning">Run (Stops Current)</button>
                     {% else %}
@@ -151,6 +153,7 @@
                     {% endif %}
                 </form>
                 <form method="POST" action="{{ url_for('versions.delete', version_id=v.id) }}" class="inline" onsubmit="return confirm('Delete version {{ v.version_number }}? This cannot be undone.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                 </form>
                 {% endif %}
@@ -171,7 +174,7 @@ async function runBenchmark(versionId, btn) {
     status.innerHTML = '<div class="alert alert-info">Running benchmark... (this may take 30-60s)</div>';
 
     try {
-        const resp = await fetch(`/version/${versionId}/benchmark`, {
+        const resp = await csrfSafeFetch(`/version/${versionId}/benchmark`, {
             method: 'POST',
         });
         const data = await resp.json();

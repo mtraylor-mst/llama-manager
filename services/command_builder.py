@@ -471,15 +471,7 @@ def build_command(version_id):
             else:
                 val_str = str(val)
                 if val_str:
-                    if '"' in val_str or "'" in val_str or ' ' in val_str:
-                        # JSON-like values with double quotes → single-quote the whole thing
-                        if '"' in val_str and "'" not in val_str:
-                            parts.extend([flag, f"'{val_str}'"])
-                        else:
-                            escaped = val_str.replace("'", "'\\''")
-                            parts.extend([flag, f"'{escaped}'"])
-                    else:
-                        parts.extend([flag, val_str])
+                    parts.extend([flag, val_str])
 
     # Model path is special - it comes first after binary
     model = data.get('model_loading', {}).get('model_path')
@@ -585,10 +577,10 @@ def build_command(version_id):
     if api_key:
         parts.extend(['--api-key', api_key])
 
-    # Chat template kwargs (JSON value — use single quotes for shell safety)
+    # Chat template kwargs (JSON value — no quoting needed, passed directly to Popen)
     ct_kwargs = data.get('chat_templates', {}).get('chat_template_kwargs')
     if ct_kwargs:
-        parts.extend(['--chat-template-kwargs', f"'{ct_kwargs}'"])
+        parts.extend(['--chat-template-kwargs', ct_kwargs])
 
     # Spec replace
     sr_target = data.get('speculative', {}).get('spec_replace_target')
@@ -601,7 +593,29 @@ def build_command(version_id):
     if otd:
         parts.extend(['--override-tensor-draft', otd])
 
-    return ' '.join(parts)
+    return parts
+
+
+def build_command_string(version_id, redact_secrets=False):
+    """Build a properly quoted command string for display/copy-paste."""
+    import shlex
+    args = build_command(version_id)
+    if redact_secrets:
+        secret_flags = {'--hf-token', '--api-key'}
+        masked = []
+        skip_next = False
+        for i, arg in enumerate(args):
+            if skip_next:
+                skip_next = False
+                masked.append('***')
+                continue
+            if arg in secret_flags and i + 1 < len(args):
+                masked.append(arg)
+                skip_next = True
+                continue
+            masked.append(arg)
+        args = masked
+    return ' '.join(shlex.quote(a) for a in args)
 
 
 def get_models_in_dir(model_dir=None):

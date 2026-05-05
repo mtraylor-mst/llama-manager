@@ -1,6 +1,8 @@
+import logging
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 
 bp = Blueprint('common', __name__)
+logger = logging.getLogger(__name__)
 
 
 @bp.route('/common-options')
@@ -10,7 +12,8 @@ def index():
         from template_utils import CATEGORY_FIELDS
         options = get_common_options()
     except Exception as e:
-        flash(f'Error loading common options: {e}. Have you run the schema migration?', 'error')
+        logger.error('Error loading common options', exc_info=True)
+        flash('Error loading common options. Have you run the schema migration?', 'error')
         options = []
 
     # Resolve labels for each option
@@ -63,7 +66,8 @@ def toggle():
 
         return jsonify({'common': currently_common})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error('Error toggling common option', exc_info=True)
+        return jsonify({'error': 'Failed to toggle option'}), 500
 
 
 @bp.route('/common-options/reorder', methods=['POST'])
