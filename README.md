@@ -25,6 +25,8 @@ mysql -h $HOST -u $USER -p llama_configs < schema.sql
 python run.py
 ```
 
+For detailed prerequisites, virtual environment setup, and database initialization, see [Setup & Installation](docs/SETUP.md).
+
 ### Environment Variables
 
 | Variable | Default | Description |
@@ -48,6 +50,14 @@ python run.py
 3. The config is stored under the model name (e.g., `Qwen3.6-27B.Q4_K_M.gguf`)
 4. Edit any version's parameters through the web form, or launch it directly
 5. Subsequent imports of the same model add new versions only when settings differ
+
+For detailed workflows — importing, forking, benchmarking, and server lifecycle — see [Core Workflows](docs/WORKFLOWS.md).
+
+## Advanced Topics
+
+- **Parameter reference & tuning guide** — [Advanced Features & Optimization](docs/ADVANCED.md)
+- **API endpoints** (`/api/models`, `/api/version/<id>/data`) — covered in [Advanced Features & Optimization](docs/ADVANCED.md)
+- **Common issues and maintenance** — [Troubleshooting & Maintenance](docs/TROUBLESHOOTING.md)
 
 ## Tech Stack
 
