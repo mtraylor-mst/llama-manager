@@ -95,7 +95,8 @@ a:hover { color: var(--primary-hover); }
     gap: 0.4rem;
 }
 .table .actions .btn,
-.table .actions .btn[onclick] {
+.table .actions .btn[onclick],
+.table .actions .status {
     display: flex;
     align-items: center;
 }
@@ -107,7 +108,7 @@ a:hover { color: var(--primary-hover); }
     display: flex;
     align-items: stretch;
 }
-.inline button.btn {
+.table .inline button.btn {
     height: 100%;
     display: flex;
     align-items: center;
