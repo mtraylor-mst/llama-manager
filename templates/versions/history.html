@@ -28,10 +28,12 @@
                 <span class="status running" style="font-size:0.8rem">● Running</span>
                 {% elif server_status.running and v.id != latest_version_id %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-warning">Run (Stops Current)</button>
                 </form>
                 {% elif not server_status.running %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-sm btn-success">Run</button>
                 </form>
                 {% endif %}

@@ -1,148 +1,172 @@
+import os
+import signal
 import subprocess
-from config import SCREEN_PREFIX
+
+_PID_FILE = '/tmp/.llama-manager.pid'
 
 
-def _find_active_screen():
-    """Find any running screen session matching our prefix pattern."""
+def _write_pid(pid, version_id=None):
+    """Write the server PID and version_id to a file for recovery across restarts."""
+    with open(_PID_FILE, 'w') as f:
+        f.write(f'{pid}\n{version_id or ""}')
+
+
+def _read_pid():
+    """Read and validate the stored PID. Returns (pid, version_id) or (None, None)."""
+    if not os.path.exists(_PID_FILE):
+        return None, None
     try:
-        result = subprocess.run(
-            ['screen', '-ls'],
-            capture_output=True, text=True, timeout=5
-        )
-        for line in result.stdout.splitlines():
-            if SCREEN_PREFIX in line and ('Detached' in line or 'Attached' in line):
-                parts = line.strip().split()
-                if parts:
-                    raw_name = parts[0].rstrip('.')
-                    # screen -ls returns "pid.name" — strip the PID prefix
-                    if '.' in raw_name:
-                        screen_name = raw_name.split('.', 1)[1]
-                    else:
-                        screen_name = raw_name
-                    state = 'attached' if 'Attached' in line else 'detached'
-                    return screen_name, state
-        return None, None
-    except (subprocess.TimeoutExpired, FileNotFoundError):
+        with open(_PID_FILE, 'r') as f:
+            lines = f.read().strip().split('\n')
+        pid = int(lines[0])
+        vid = int(lines[1]) if len(lines) > 1 and lines[1].isdigit() else None
+        # Check if process is actually running
+        os.kill(pid, 0)
+        return pid, vid
+    except (ValueError, ProcessLookupError, PermissionError, OSError):
         return None, None
 
 
-def get_log_file():
-    """Get the log file path for the currently running session."""
-    screen_name, _ = _find_active_screen()
-    if screen_name:
-        return f'/tmp/{screen_name}.log'
-    return None
+def _cleanup_pid():
+    """Remove the PID file."""
+    try:
+        os.remove(_PID_FILE)
+    except OSError:
+        pass
+
+
+def get_log_file(version_id=None):
+    """Get the log file path for a version."""
+    if version_id:
+        return f'/tmp/llama-server-{version_id}.log'
+    return '/tmp/llama-server.log'
+
+
+def _find_running():
+    """Find any running llama-server process we own.
+
+    Returns (pid, version_id) or (None, None).
+    """
+    # First check our PID file
+    pid, vid = _read_pid()
+    if pid:
+        return pid, vid
+
+    # Fallback: scan for llama-server processes with our log files
+    import glob as glob_module
+    for log_path in glob_module.glob('/tmp/llama-server-*.log'):
+        try:
+            # Check if any process has this file open
+            result = subprocess.run(
+                ['lsof', '-t', log_path],
+                capture_output=True, text=True, timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                pids = result.stdout.strip().split('\n')
+                for p in pids:
+                    try:
+                        p = int(p)
+                        os.kill(p, 0)
+                        # Extract version_id from log filename
+                        base = os.path.basename(log_path)
+                        vid = base.replace('llama-server-', '').replace('.log', '')
+                        return p, int(vid) if vid.isdigit() else None
+                    except (ValueError, ProcessLookupError):
+                        continue
+        except Exception:
+            continue
+    return None, None
 
 
 def get_running_version_id():
-    """Extract the version_id from the running screen session name.
-
-    Screen names follow pattern: {prefix}-{version_id}
-    Returns int version_id or None.
-    """
-    screen_name, _ = _find_active_screen()
-    if not screen_name:
-        return None
-    # Extract version_id from "llama-manager-{id}"
-    prefix_with_dash = f'{SCREEN_PREFIX}-'
-    if screen_name.startswith(prefix_with_dash):
-        try:
-            return int(screen_name[len(prefix_with_dash):])
-        except ValueError:
-            return None
-    return None
+    """Get the version_id of the currently running server."""
+    _, vid = _find_running()
+    return vid
 
 
 def is_running():
-    """Check if a screen session with our prefix is running."""
-    name, _ = _find_active_screen()
-    return name is not None
+    """Check if a llama-server process we own is running."""
+    return _find_running()[0] is not None
 
 
 def get_status():
-    """Get detailed status of the screen session."""
-    screen_name, state = _find_active_screen()
-    if screen_name:
-        try:
-            result = subprocess.run(
-                ['screen', '-ls'],
-                capture_output=True, text=True, timeout=5
-            )
-            for line in result.stdout.splitlines():
-                if screen_name in line:
-                    return {
-                        'running': True,
-                        'state': state,
-                        'name': screen_name,
-                        'line': line.strip(),
-                    }
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
-        return {'running': True, 'state': state or 'unknown', 'name': screen_name, 'line': ''}
+    """Get detailed status of the running server."""
+    pid, vid = _find_running()
+    if pid:
+        return {
+            'running': True,
+            'state': 'running',
+            'name': f'PID {pid}',
+            'line': '',
+        }
     return {'running': False, 'state': 'stopped', 'name': None, 'line': ''}
 
 
 def stop():
-    """Stop the running screen session."""
-    screen_name, _ = _find_active_screen()
-    if not screen_name:
-        return {'success': True, 'message': 'No session running'}
+    """Stop the running llama-server process."""
+    pid, _ = _find_running()
+    if not pid:
+        return {'success': True, 'message': 'No server running'}
 
     try:
-        subprocess.run(
-            ['screen', '-S', screen_name, '-X', 'quit'],
-            capture_output=True, text=True, timeout=10
-        )
+        os.kill(pid, signal.SIGTERM)
         import time
-        time.sleep(1)
-        return {'success': not is_running(), 'message': f'Session {screen_name} stopped'}
-    except subprocess.TimeoutExpired:
-        return {'success': False, 'message': 'Timeout stopping session'}
+        # Wait up to 5 seconds for graceful shutdown
+        for _ in range(50):
+            time.sleep(0.1)
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                _cleanup_pid()
+                return {'success': True, 'message': f'Server (PID {pid}) stopped'}
+        # Force kill if still running
+        os.kill(pid, signal.SIGKILL)
+        _cleanup_pid()
+        return {'success': True, 'message': f'Server (PID {pid}) killed'}
+    except ProcessLookupError:
+        _cleanup_pid()
+        return {'success': True, 'message': 'Server already stopped'}
+    except Exception as e:
+        return {'success': False, 'message': f'Failed to stop: {e}'}
 
 
-def start(command, version_id=None):
-    """Start llama-server in a screen session. Stops existing session first."""
+def start(args, version_id=None):
+    """Start llama-server directly via subprocess. Stops existing process first.
+
+    args: list of command arguments (no shell interpretation).
+    """
     if is_running():
         stop()
         import time
         time.sleep(2)
 
-    # Build screen name: prefix-{version_id} for uniqueness across configs
-    if version_id:
-        screen_name = f'{SCREEN_PREFIX}-{version_id}'
-    else:
-        screen_name = SCREEN_PREFIX
-
-    # Redirect stdout/stderr to a log file so we can stream it
-    log_file = f'/tmp/{screen_name}.log'
-    wrapped_command = f'{command} >> {log_file} 2>&1'
+    log_file = get_log_file(version_id)
 
     try:
-        subprocess.run(
-            ['screen', '-dmS', screen_name, 'bash', '-c', wrapped_command],
-            check=True, timeout=10
-        )
-        return {'success': True, 'message': f'Started {screen_name}'}
-    except subprocess.CalledProcessError as e:
-        return {'success': False, 'message': f'Failed to start: {e.stderr or str(e)}'}
-    except subprocess.TimeoutExpired:
-        return {'success': False, 'message': 'Timeout starting session'}
+        with open(log_file, 'a') as log_fd:
+            proc = subprocess.Popen(
+                args,
+                stdout=log_fd, stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        _write_pid(proc.pid, version_id)
+        return {'success': True, 'message': f'Started (PID {proc.pid})'}
+    except Exception as e:
+        return {'success': False, 'message': f'Failed to start: {e}'}
 
 
 def get_logs(lines=50):
-    """Get recent logs from llama-server via screen hardcopy."""
-    screen_name, _ = _find_active_screen()
-    if not screen_name:
+    """Get recent lines from the server log file."""
+    pid, vid = _find_running()
+    if not pid:
         return ''
 
+    log_file = get_log_file(vid)
     try:
         result = subprocess.run(
-            ['screen', '-S', screen_name, '-X', 'hardcopy', '/tmp/llama-screen.log'],
+            ['tail', '-n', str(lines), log_file],
             capture_output=True, text=True, timeout=5
         )
-        if result.returncode == 0:
-            with open('/tmp/llama-screen.log', 'r') as f:
-                return f.read()
-        return ''
-    except (subprocess.TimeoutExpired, FileNotFoundError, IOError):
+        return result.stdout if result.returncode == 0 else ''
+    except Exception:
         return ''

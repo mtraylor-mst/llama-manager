@@ -5,7 +5,8 @@
 <h1>{{ 'Edit' if config else 'New' }} Config</h1>
 
 <form method="POST" class="form-panel">
-    <div class="form-group">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
         <label>Name *</label>
         <input type="text" name="name" value="{{ config.name if config else '' }}" required placeholder="e.g. Llama3-8B-Q4">
     </div>

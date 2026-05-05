@@ -69,7 +69,10 @@ def parse_args(args):
         '-kvo': 'kv-offload', '-nkvo': 'no-kv-offload',
     }
 
-    i = 1 if args else 0
+    if not args:
+        return result
+
+    i = 1
 
     while i < len(args):
         arg = args[i]

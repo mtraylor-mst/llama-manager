@@ -1,10 +1,31 @@
-from flask import Flask, render_template
-from config import MODEL_DIR, SECRET_KEY
+import logging
+from flask import Flask, render_template, Response, request
+from flask_wtf.csrf import CSRFProtect
+from config import MODEL_DIR, SECRET_KEY, AUTH_ENABLED, AUTH_USER, AUTH_PASSWORD
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
+
+csrf = CSRFProtect()
 
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = SECRET_KEY
+    # Session cookie security
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    csrf.init_app(app)
+
+    # HTTP Basic Auth middleware
+    if AUTH_ENABLED:
+        @app.before_request
+        def check_auth():
+            auth = request.authorization
+            if not auth or not (auth.username == AUTH_USER and auth.password == AUTH_PASSWORD):
+                return Response('Authentication required', 401, {
+                    'WWW-Authenticate': 'Basic realm="Login Required"'
+                })
 
     # Register template helpers
     from template_utils import register_template_helpers

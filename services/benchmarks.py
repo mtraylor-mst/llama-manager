@@ -1,10 +1,13 @@
 """Benchmark service — sends test prompt to running llama-server, captures metrics."""
+import logging
 import subprocess
 import time
 import urllib.request
 import urllib.error
 import json
 from config import DEFAULT_API_HOST, DEFAULT_API_PORT
+
+logger = logging.getLogger(__name__)
 
 
 # Default test prompt — ~30 tokens, generic enough for any model
@@ -95,10 +98,11 @@ def run_benchmark(host, port, prompt=TEST_PROMPT, n_tokens=TEST_N_TOKENS):
 
             return {'tps': 0, 'tokens_generated': 0, 'duration_sec': duration, 'error': 'Unexpected response format'}
 
-    except urllib.error.URLError as e:
-        return {'tps': 0, 'tokens_generated': 0, 'duration_sec': 0, 'error': f'Connection failed: {e.reason}'}
+    except urllib.error.URLError:
+        return {'tps': 0, 'tokens_generated': 0, 'duration_sec': 0, 'error': 'Connection failed — is llama-server running?'}
     except Exception as e:
-        return {'tps': 0, 'tokens_generated': 0, 'duration_sec': 0, 'error': str(e)}
+        logger.error('Benchmark failed', exc_info=True)
+        return {'tps': 0, 'tokens_generated': 0, 'duration_sec': 0, 'error': 'Benchmark failed unexpectedly'}
 
 
 def get_vram():

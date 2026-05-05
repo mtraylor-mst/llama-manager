@@ -25,6 +25,91 @@ COMPLEX_TABLES = [
     'dry_sequence_breakers',
 ]
 
+CATEGORY_COLUMNS = {
+    'model_loading': {
+        'model_path', 'model_url', 'hf_repo', 'hf_file', 'hf_token',
+        'lora_paths', 'control_vector_paths', 'model_draft', 'model_vocoder',
+        'mmproj_path', 'mmproj_url', 'mmproj_auto', 'mmproj_offload',
+        'aliases', 'tags',
+    },
+    'context_batching': {
+        'ctx_size', 'n_predict', 'batch_size', 'ubatch_size', 'keep_tokens',
+        'n_parallel', 'cont_batching', 'context_shift', 'reverse_prompt',
+        'special_tokens', 'warmup', 'spm_infill', 'pooling', 'cache_prompt',
+        'cache_reuse', 'slot_prompt_similarity',
+    },
+    'cpu_threading': {
+        'threads', 'threads_batch', 'cpu_mask', 'cpu_range', 'cpu_strict',
+        'prio', 'poll', 'cpu_mask_batch', 'cpu_range_batch',
+        'cpu_strict_batch', 'prio_batch', 'poll_batch', 'numa',
+        'threads_draft', 'threads_batch_draft',
+    },
+    'gpu_device': {
+        'gpu_layers', 'devices', 'split_mode', 'tensor_split', 'main_gpu',
+        'flash_attn', 'kv_offload', 'repack', 'no_host', 'fit', 'fit_target',
+        'fit_ctx', 'op_offload', 'cpu_moe', 'n_cpu_moe',
+        'cpu_moe_draft', 'n_cpu_moe_draft',
+    },
+    'memory': {
+        'cache_type_k', 'cache_type_v', 'cache_type_k_draft', 'cache_type_v_draft',
+        'mmap', 'mlock', 'direct_io', 'defrag_thold', 'swa_full',
+    },
+    'sampling': {
+        'samplers', 'sampler_seq', 'seed', 'ignore_eos', 'temperature',
+        'top_k', 'top_p', 'min_p', 'top_n_sigma', 'xtc_probability',
+        'xtc_threshold', 'typical_p', 'repeat_last_n', 'repeat_penalty',
+        'presence_penalty', 'frequency_penalty', 'dry_multiplier', 'dry_base',
+        'dry_allowed_length', 'dry_penalty_last_n', 'adaptive_target',
+        'adaptive_decay', 'dynatemp_range', 'dynatemp_exp',
+        'mirostat', 'mirostat_lr', 'mirostat_ent', 'backend_sampling',
+    },
+    'server': {
+        'host', 'port', 'reuse_port', 'static_path', 'api_prefix', 'timeout',
+        'threads_http', 'api_key', 'ssl_key_file', 'ssl_cert_file',
+        'webui', 'webui_config', 'webui_config_file', 'webui_mcp_proxy',
+        'tools', 'embedding', 'reranking', 'metrics', 'props', 'slots',
+        'slot_save_path', 'media_path', 'cache_prompt',
+        'lora_init_without_apply', 'sleep_idle_seconds',
+    },
+    'speculative': {
+        'draft_max', 'draft_min', 'draft_p_min', 'ctx_size_draft',
+        'devices_draft', 'gpu_layers_draft', 'spec_type',
+        'spec_ngram_size_n', 'spec_ngram_size_m', 'spec_ngram_min_hits',
+        'spec_replace_target', 'spec_replace_draft', 'override_tensor_draft',
+    },
+    'chat_templates': {
+        'chat_template', 'chat_template_file', 'chat_template_kwargs',
+        'jinja', 'reasoning_format', 'reasoning', 'reasoning_budget',
+        'reasoning_budget_message', 'skip_chat_parsing', 'prefill_assistant',
+        'backend_sampling',
+    },
+    'checkpoints': {
+        'ctx_checkpoints', 'checkpoint_every_nt', 'cache_ram', 'kv_unified',
+        'cache_idle_slots', 'lookup_cache_static', 'lookup_cache_dynamic',
+    },
+    'logging': {
+        'log_verbosity', 'log_file', 'log_colors', 'log_prefix',
+        'log_timestamps', 'verbose', 'log_disable', 'offline', 'perf',
+        'escape',
+    },
+    'advanced': {
+        'rope_scaling', 'rope_scale', 'rope_freq_base', 'rope_freq_scale',
+        'yarn_orig_ctx', 'yarn_ext_factor', 'yarn_attn_factor',
+        'yarn_beta_slow', 'yarn_beta_fast', 'grammar', 'grammar_file',
+        'json_schema', 'json_schema_file', 'check_tensors',
+        'image_min_tokens', 'image_max_tokens', 'pooling_override',
+    },
+}
+
+COMPLEX_TABLE_COLUMNS = {
+    'logit_biases': {'token_id', 'bias_value'},
+    'lora_adapters': {'path', 'scale'},
+    'control_vectors': {'path', 'scale', 'layer_range_start', 'layer_range_end'},
+    'override_kv': {'key_name', 'key_type', 'key_value'},
+    'override_tensors': {'tensor_pattern', 'buffer_type'},
+    'dry_sequence_breakers': {'breaker_char'},
+}
+
 
 def get_all_configs():
     with get_conn() as conn:
@@ -177,6 +262,8 @@ def duplicate_version(source_version_id, config_id, comments=''):
 
 def save_category(version_id, category, data):
     """Save a category table row. data is a dict of column->value."""
+    allowed = CATEGORY_COLUMNS.get(category, set())
+    data = {k: v for k, v in data.items() if k in allowed}
     table = f'v_{category}'
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -213,11 +300,15 @@ def get_category(version_id, category):
 
 def save_complex_table(version_id, table_name, rows):
     """Save complex value rows (logit_biases, lora_adapters, etc.)."""
+    allowed = COMPLEX_TABLE_COLUMNS.get(table_name, set())
     full_name = f'v_{table_name}'
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(f'DELETE FROM {full_name} WHERE version_id = %s', (version_id,))
             for row in rows:
+                row = {k: v for k, v in row.items() if k in allowed}
+                if not row:
+                    continue
                 cols = ', '.join(row.keys())
                 placeholders = ', '.join(['%s'] * len(row))
                 values = tuple(row.values())

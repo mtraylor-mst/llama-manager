@@ -303,8 +303,8 @@ def duplicate(version_id):
 
 @bp.route('/version/<int:version_id>/command')
 def command(version_id):
-    from services.command_builder import build_command
-    cmd = build_command(version_id)
+    from services.command_builder import build_command_string
+    cmd = build_command_string(version_id, redact_secrets=True)
     return jsonify({'command': cmd})
 
 
