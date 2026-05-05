@@ -26,12 +26,12 @@
             <td>—</td>
             <td>{{ cfg.updated_at.strftime('%Y-%m-%d %H:%M') if cfg.updated_at else '' }}</td>
             <td class="actions">
-                <a href="{{ url_for('configs.view', config_id=cfg.id) }}" class="btn btn-sm">View</a>
-                <a href="{{ url_for('configs.edit', config_id=cfg.id) }}" class="btn btn-sm">Edit</a>
+                <a href="{{ url_for('configs.view', config_id=cfg.id) }}" class="btn">View</a>
+                <a href="{{ url_for('configs.edit', config_id=cfg.id) }}" class="btn">Edit</a>
                 <form method="POST" action="{{ url_for('configs.delete', config_id=cfg.id) }}" class="inline"
                       onsubmit="return confirm('Delete this config and all versions?')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-danger">Del</button>
+                    <button type="submit" class="btn btn-danger">Del</button>
                 </form>
             </td>
         </tr>

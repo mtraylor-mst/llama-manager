@@ -31,9 +31,9 @@ def status():
                     f'hx-trigger="every 10s" hx-swap="outerHTML">'
                     f'● Running{ver_label} '
                     f'<button hx-post="{url_for("server.import_config")}" hx-target="#flash-area" '
-                    f'class="btn btn-sm btn-import">Import Config</button> '
-                    f'<button hx-post="{url_for("server.stop")}" hx-target="#flash-area" '
-                    f'class="btn btn-sm btn-danger">Stop</button></span>')
+f'class="btn btn-import">Import Config</button> '
+                     f'<button hx-post="{url_for("server.stop")}" hx-target="#flash-area" '
+                     f'class="btn btn-danger">Stop</button></span>')
         else:
             return '<span class="status stopped">● Stopped</span>'
     return jsonify(st)

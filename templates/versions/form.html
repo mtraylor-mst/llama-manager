@@ -12,9 +12,9 @@
     <div class="running-banner-actions">
         <form method="POST" action="{{ url_for('server.start', version_id=version.id) }}" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-warning">Switch to This Version</button>
+            <button type="submit" class="btn btn-warning">Switch to This Version</button>
         </form>
-        <a href="{{ url_for('versions.edit', version_id=running_version.id) }}" class="btn btn-sm">Edit Running Version</a>
+        <a href="{{ url_for('versions.edit', version_id=running_version.id) }}" class="btn">Edit Running Version</a>
     </div>
 </div>
 {% elif not is_fork and running_version and running_version.id == version.id %}
@@ -22,7 +22,7 @@
     <span class="status running">● Running</span>
     <span>This version is currently running.</span>
     <div class="running-banner-actions">
-        <button hx-post="{{ url_for('server.stop') }}" hx-target="#flash-area" class="btn btn-sm btn-danger">Stop Server</button>
+        <button hx-post="{{ url_for('server.stop') }}" hx-target="#flash-area" class="btn btn-danger">Stop Server</button>
     </div>
 </div>
 {% endif %}
@@ -120,7 +120,7 @@
         <div id="complex-{{ tbl }}">
             {{ render_complex(tbl, data[tbl]) | safe }}
         </div>
-        <button type="button" class="btn btn-sm" onclick="addComplexRow('{{ tbl }}')">+ Add</button>
+        <button type="button" class="btn" onclick="addComplexRow('{{ tbl }}')">+ Add</button>
     </details>
     {% endfor %}
 

@@ -47,8 +47,10 @@ a:hover { color: var(--primary-hover); }
 
 /* Buttons */
 .btn {
-    display: inline-block;
-    padding: 0.4rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.75rem;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 3px;
@@ -56,7 +58,9 @@ a:hover { color: var(--primary-hover); }
     cursor: pointer;
     font-family: inherit;
     font-size: 0.85rem;
+    line-height: 1.4;
     text-align: center;
+    white-space: nowrap;
 }
 .btn:hover { background: var(--border); }
 .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
@@ -65,7 +69,6 @@ a:hover { color: var(--primary-hover); }
 .btn-danger { background: #3d2d3d; border-color: var(--danger); color: var(--danger); }
 .btn-warning { background: #3d3a2d; border-color: var(--warning); color: var(--warning); }
 .btn-import { background: #2d3d4a; border-color: var(--primary); color: var(--primary); }
-.btn-sm { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
 
 /* Page header */
 .page-header {
