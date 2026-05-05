@@ -517,10 +517,10 @@ def build_command(version_id):
     # Logit biases
     lbs = data.get('logit_biases', [])
     for lb in lbs:
-        sign = '+' if lb['bias_value'] >= 0 else ''
+        sign = '+' if lb['bias_value'] >= 0 else '-'
         parts.extend([
             '--logit-bias',
-            f"{sign}{lb['token_id']}{sign}{abs(lb['bias_value'])}",
+            f"{lb['token_id']}{sign}{abs(lb['bias_value'])}",
         ])
 
     # Override KV

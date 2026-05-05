@@ -221,7 +221,6 @@ def create_version(config_id, comments=''):
 
 def duplicate_version(source_version_id, config_id, comments=''):
     """Copy all category data from source version to a new version."""
-    next_version_number(config_id)
     version_id = create_version(config_id, comments)
 
     with get_conn() as conn:

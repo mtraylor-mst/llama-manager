@@ -183,7 +183,7 @@ def render_field(category, col, value):
         html = f'<select name="{name}">\n<option value="">(default)</option>\n'
         for opt_val, opt_label in options:
             sel = 'selected' if str(value) == str(opt_val) else ''
-            html += f'<option value="{opt_val}" {sel}>{opt_label}</option>\n'
+            html += f'<option value="{hescape(str(opt_val), quote=True)}" {sel}>{opt_label}</option>\n'
         html += '</select>'
         return html
 
