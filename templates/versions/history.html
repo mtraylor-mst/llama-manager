@@ -23,18 +23,18 @@
             <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ (v.comments or '')[:80] }}</td>
             <td class="actions">
-                <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn btn-sm">Edit</a>
+                <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn">Edit</a>
                 {% if v.id == running_version_id %}
                 <span class="status running" style="font-size:0.8rem">● Running</span>
                 {% elif server_status.running and v.id != latest_version_id %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-warning">Run (Stops Current)</button>
+                    <button type="submit" class="btn btn-warning">Run (Stops Current)</button>
                 </form>
                 {% elif not server_status.running %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-success">Run</button>
+                    <button type="submit" class="btn btn-success">Run</button>
                 </form>
                 {% endif %}
             </td>

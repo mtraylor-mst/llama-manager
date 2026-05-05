@@ -30,7 +30,7 @@
         </span>
         <form method="POST" action="{{ url_for('common.remove', option_id=opt.id) }}" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-danger" title="Remove from common options">&times;</button>
+            <button type="submit" class="btn btn-danger" title="Remove from common options">&times;</button>
         </form>
     </div>
     {% endfor %}

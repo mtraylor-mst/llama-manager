@@ -21,7 +21,7 @@
     {% endif %}
 
     <div class="command-box">
-        <button class="btn btn-sm" id="copy-btn-{{ featured.id }}" onclick="copyCommand({{ featured.id }}, this)">Copy</button>
+        <button class="btn" id="copy-btn-{{ featured.id }}" onclick="copyCommand({{ featured.id }}, this)">Copy</button>
         <input type="text" readonly id="cmd-{{ featured.id }}" value="">
         <script>
             fetch('{{ url_for("versions.command", version_id=featured.id) }}')
@@ -140,21 +140,21 @@
             <td>{{ v.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ (v.comments or '')[:60] }}</td>
             <td class="actions">
-                <a href="{{ url_for('versions.fork_edit', version_id=v.id) }}" class="btn btn-sm">Fork &amp; Edit</a>
+                <a href="{{ url_for('versions.fork_edit', version_id=v.id) }}" class="btn btn-primary">Fork &amp; Edit</a>
                 {% if v.id == running_version_id %}
                 <span class="status running" style="font-size:0.8rem">● Running</span>
                 {% else %}
                 <form method="POST" action="{{ url_for('server.start', version_id=v.id) }}" class="inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     {% if server_status.running %}
-                    <button type="submit" class="btn btn-sm btn-warning">Run (Stops Current)</button>
+                    <button type="submit" class="btn btn-warning">Run (Stops Current)</button>
                     {% else %}
-                    <button type="submit" class="btn btn-sm btn-success">Run</button>
+                    <button type="submit" class="btn btn-success">Run</button>
                     {% endif %}
                 </form>
                 <form method="POST" action="{{ url_for('versions.delete', version_id=v.id) }}" class="inline" onsubmit="return confirm('Delete version {{ v.version_number }}? This cannot be undone.')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
                 {% endif %}
             </td>
