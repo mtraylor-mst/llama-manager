@@ -81,8 +81,37 @@ a:hover { color: var(--primary-hover); }
 .table th, .table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
 .table th { color: var(--text-dim); font-weight: normal; font-size: 0.8rem; text-transform: uppercase; }
 .table tr:hover { background: var(--surface); }
-.table .actions { white-space: nowrap; }
-.inline { display: inline; }
+.table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    box-sizing: border-box;
+    min-height: 56px;
+}
+.table .actions {
+    white-space: nowrap;
+    display: flex;
+    align-items: stretch;
+    gap: 0.4rem;
+}
+.table .actions .btn,
+.table .actions .btn[onclick] {
+    display: flex;
+    align-items: center;
+}
+.inline {
+    display: inline;
+    margin: 0;
+}
+.table .inline {
+    display: flex;
+    align-items: stretch;
+}
+.inline button.btn {
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
 
 /* Forms */
 .form-panel {
