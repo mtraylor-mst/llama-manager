@@ -113,7 +113,9 @@ class TestServerRoutes:
 
 class TestIndexRoute:
     @patch('models.configs.get_all_configs')
-    def test_index(self, mock_configs, client):
+    @patch('models.configs.get_version')
+    def test_index(self, mock_version, mock_configs, client):
         mock_configs.return_value = [{'id': 1, 'name': 'Test Config', 'description': '', 'model_dir': ''}]
+        mock_version.return_value = None
         resp = client.get('/')
         assert resp.status_code == 200

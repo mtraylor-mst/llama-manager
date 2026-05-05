@@ -52,11 +52,10 @@ def _find_running():
     if pid:
         return pid, vid
 
-    # Fallback: scan for llama-server processes with our log files
+    # Fallback 1: scan for llama-server processes with our log files via lsof
     import glob as glob_module
     for log_path in glob_module.glob('/tmp/llama-server-*.log'):
         try:
-            # Check if any process has this file open
             result = subprocess.run(
                 ['lsof', '-t', log_path],
                 capture_output=True, text=True, timeout=5
@@ -67,7 +66,6 @@ def _find_running():
                     try:
                         p = int(p)
                         os.kill(p, 0)
-                        # Extract version_id from log filename
                         base = os.path.basename(log_path)
                         vid = base.replace('llama-server-', '').replace('.log', '')
                         return p, int(vid) if vid.isdigit() else None
@@ -75,6 +73,38 @@ def _find_running():
                         continue
         except Exception:
             continue
+
+    # Fallback 2: find llama-server by process name via pgrep
+    try:
+        result = subprocess.run(
+            ['pgrep', '-x', 'llama-server'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            for p in result.stdout.strip().split('\n'):
+                try:
+                    p = int(p)
+                    os.kill(p, 0)
+                    # Determine version_id from stdout log file via /proc/pid/fd/1
+                    fd_target = os.readlink(f'/proc/{p}/fd/1')
+                    if fd_target.startswith('/tmp/llama-server-'):
+                        vid_str = os.path.basename(fd_target).replace('.log', '')
+                        vid = None
+                        for prefix in ['llama-server-', 'llama-server']:
+                            if vid_str.startswith(prefix):
+                                remainder = vid_str[len(prefix):]
+                                vid = int(remainder) if remainder.isdigit() else None
+                                break
+                        _write_pid(p, vid)
+                        return p, vid
+                    # Process is running but not using our log file convention
+                    _write_pid(p, None)
+                    return p, None
+                except (ValueError, ProcessLookupError, OSError):
+                    continue
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
     return None, None
 
 
