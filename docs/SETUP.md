@@ -20,10 +20,10 @@ The application uses a MySQL/MariaDB backend to store configurations, versions, 
 `llama-manager` is a management layer for the `llama.cpp` server. You must have the `llama-server` binary available on your system path or know its absolute location.
 - **Build from source**: Follow the instructions in the [official llama.cpp repository](https://github.com/ggerganov/llama.cpp).
 
-### 4. Process Management (`screen`)
-`llama-manager` uses `screen` to manage server processes in the background, allowing you to view live logs via the web interface.
-- **Linux**: Install via `sudo apt install screen` or your distribution's equivalent.
-- **macOS**: `screen` is typically pre-installed. You can verify this by running `screen --version` in your terminal.
+### 4. Process Management (`Popen`)
+`llama-manager` uses `Popen` to manage server processes in the background, allowing you to view live logs via the web interface.
+- **Linux**: Install via `sudo apt install Popen` or your distribution's equivalent.
+- **macOS**: `Popen` is typically pre-installed. You can verify this by running `Popen --version` in your terminal.
 
 ---
 
@@ -66,7 +66,7 @@ mysql -h $HOST -u $USER -p llama_configs < schema.sql
 | `LLAMA_DB_PASS` | `llama_mgr` | Database password |
 | `LLAMA_DB_NAME` | `llama_configs` | Database name |
 | `LLAMA_MODEL_DIR` | `~/.cache/huggingface/hub/` | Default directory for GGUF models |
-| `LLAMA_SCREEN_PREFIX` | `llama-manager` | Prefix for managed `screen` sessions |
+| `LLAMA_SCREEN_PREFIX` | `llama-manager` | Prefix for managed `Popen` sessions |
 | `LLAMA_SERVER_BINARY` | `/usr/local/bin/llama-server` | Path to the `llama-server` binary |
 | `LLAMA_SECRET_KEY` | `change-me-in-production` | Flask secret key for secure sessions |
 

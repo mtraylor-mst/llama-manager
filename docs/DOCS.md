@@ -9,7 +9,7 @@ This document serves as a central source of context for the phased generation of
 
 ### Phase 1: Setup & Installation
 *Goal: Get a user from zero to a running application.*
-- **Prerequisites**: Python, MySQL/MariaDB, `screen`, and `llama-server` binary.
+- **Prerequisites**: Python, MySQL/MariaDB, `Popen`, and `llama-server` binary.
 - **Installation**: `pip` requirements and database schema initialization.
 - **Configuration**: Environment variable guide (`LLAMA_DB_*`, `LLAMA_MODEL_DIR`, etc.).
 
@@ -17,7 +17,7 @@ This document serves as a central source of context for the phased generation of
 *Goal: Explain the primary value proposition and UI interactions.*
 - **Config Import**: Capturing live `llama-server` command lines.
 - **Version Control**: Iterating on settings and managing model-grouped history.
-- **Lifecycle Management**: Launching, restarting, and monitoring via `screen` and live logs.
+- **Lifecycle Management**: Launching, restarting, and monitoring via `Popen` and live logs.
 
 ### Phase 3: Advanced Features & Optimization
 *Goal: Deep dive into parameter tuning and performance.*

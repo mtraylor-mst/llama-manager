@@ -46,7 +46,7 @@ Settings are organized into logical categories to make tuning easier:
 Once a configuration is set, you can use the manager to control the actual server processes.
 
 ### Launching and Stopping
-*   **Start**: From the configuration view or the main dashboard, click **Start** on the desired version. The server will run in a background `screen` session.
+*   **Start**: From the configuration view or the main dashboard, click **Start** on the desired version. The server will run in a background `Popen` session.
 *   **Stop**: Click **Stop** to terminate the current running session.
 
 ### Real-Time Monitoring
