@@ -14,13 +14,12 @@ If you see errors related to "Database connection failed" or "Access denied":
     ```
 
 ### 2. Server Management Issues
-`llama-manager` relies on `Popen` and the `llama-server` binary to manage processes.
+`llama-manager` uses Python's built-in `subprocess.Popen` to manage server processes with PID file tracking in `/tmp/.llama-manager.pid`.
 
-*   **"Command not found: Popen"**: The `Popen` utility is not installed. Install it using your package manager (e.g., `sudo apt install Popen`).
 *   **Server Fails to Start**: 
     *   Verify the path to your `llama-server` binary in the `LLAMA_SERVER_BINARY` environment variable.
     *   Try running the generated command manually in your terminal to see if `llama.cpp` reports any errors (e.g., invalid flags or missing model files).
-*   **Permission Denied**: Ensure the user running `llama-manager` has permission to execute `Popen` and access the `llama-server` binary.
+*   **Permission Denied**: Ensure the user running `llama-manager` has permission to execute the `llama-server` binary and write to `/tmp/`.
 
 ### 3. Model & Resource Issues
 *   **Model Not Found**: Check that the `LLAMA_MODEL_DIR` environment variable points to the correct directory and that your `.gguf` files are located there.
@@ -48,4 +47,4 @@ If the web interface is unresponsive or behaving unexpectedly, check the followi
 
 1.  **Application Logs**: Check the terminal output where `run.py` was started.
 2.  **Server Logs**: `llama-manager` captures the output of the `llama-server` process. You can view these in real-time through the **Live Logs** feature in the web UI.
-3.  **System Logs**: If `Popen` or the database is failing, check your system logs (e.g., `journalctl` on Linux).
+3.  **System Logs**: If the llama-server process or database is failing, check your system logs (e.g., `journalctl` on Linux).

@@ -57,6 +57,7 @@ For detailed workflows — importing, forking, benchmarking, and server lifecycl
 
 - **Parameter reference & tuning guide** — [Advanced Features & Optimization](docs/ADVANCED.md)
 - **API endpoints** (`/api/models`, `/api/version/<id>/data`) — covered in [Advanced Features & Optimization](docs/ADVANCED.md)
+- **Benchmarking deep dive** (how it works, request details, metric interpretation) — [Benchmarking Guide](docs/BENCHMARKING.md)
 - **Common issues and maintenance** — [Troubleshooting & Maintenance](docs/TROUBLESHOOTING.md)
 
 ## Tech Stack
