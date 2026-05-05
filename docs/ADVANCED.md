@@ -4,32 +4,285 @@ This guide covers the technical details for fine-tuning model performance and in
 
 ## Parameter Reference
 
-The following parameters are used to configure the `llama-server`. They are organized by functional category to help you optimize your setup.
+The following parameters are used to configure `llama-server`. They are organized by functional category. Each parameter lists its CLI flag(s), default value, and a brief description.
 
 ### Model Loading
-*   **Model Path**: The absolute path to the `.gguf` file.
-*   **Model URL**: Load a model directly from a URL.
-*   **HuggingFace Integration**: Specify `hf-repo`, `hf-file`, or `hf-token` to load models directly from the HuggingFace Hub.
-*   **LoRA Adapters**: Attach multiple LoRA adapters with specific scaling factors.
-*   **Multimedia**: Configure Multi-modal projection (`mmproj`) for vision-enabled models.
+
+Configure which model to load and how to load it.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Model Path | `-m`, `--model` | *(required)* | Absolute path to the `.gguf` model file. |
+| Model URL | `--model-url` | — | Download and load a model directly from a remote URL. |
+| HF Repo | `--hf-repo`, `-hfr` | — | HuggingFace repository in `user/model:quant` format for direct Hub loading. |
+| HF File | `--hf-file`, `-hff` | — | Specific filename within the HuggingFace repo. |
+| HF Token | `--hf-token`, `-hft` | — | Authentication token for private HuggingFace repos. |
+| Draft Model | `--model-draft`, `-md` | — | Secondary model used for speculative decoding (drafting tokens). |
+| Vocoder Model | `--model-vocoder` | — | Audio vocoder model for speech-enabled models. |
+| MMProj Path | `--mmproj`, `-mm` | — | Path to multi-modal projection weights for vision models. |
+| MMProj URL | `--mmproj-url`, `-mmu` | — | Remote URL to download mmproj weights from. |
+| Auto MMProj | `--mmproj-auto` | off | Automatically search for and load a matching mmproj file. |
+| Offload MMProj | `--mmproj-offload` | off | Offload the mmproj layer to GPU memory. |
+| Aliases | `-a`, `--alias` | — | Comma-separated display names for the model in the API. |
+| Tags | `--tags` | — | Comma-separated tags for model metadata and filtering. |
 
 ### GPU & Device Optimization
-*   **GPU Layers (`-ngl`)**: Determines how many layers are offloaded to the GPU. Increasing this improves speed until VRAM is exhausted.
-*   **Flash Attention**: Enable `--fa` to speed up processing and reduce memory usage for long contexts.
-*   **Split Mode & Tensor Split**: For multi-GPU setups, define how work is distributed across devices.
-*   **KV Offload**: Move the Key-Value cache to the GPU to save system RAM.
+
+Control how computation is distributed across GPUs and CPU.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| GPU Layers | `-ngl`, `--gpu-layers` | 0 | Number of layers to offload to GPU. Use `all` or `auto` to maximize offloading. Higher values improve speed until VRAM is exhausted. |
+| Devices | `--device`, `-dev` | — | Comma-separated list of GPU devices to use (e.g., `0,1`). |
+| Split Mode | `-sm`, `--split-mode` | none | How work splits across GPUs: `layer` (alternate layers), `row` (split within layers), `tensor` (tensor parallelism). |
+| Tensor Split | `-ts`, `--tensor-split` | — | Ratio of tensor weights per GPU (e.g., `3,1` for 75%/25% split). |
+| Main GPU | `-mg`, `--main-gpu` | 0 | Primary GPU index for non-parallel work. |
+| Flash Attention | `-fa`, `--flash-attn` | auto | Enable flash attention (`on`/`off`/`auto`) for faster processing and lower memory on long contexts. |
+| KV Offload | `--kv-offload`, `-kvo` | off | Move the Key-Value cache to GPU to reduce system RAM pressure. |
+| Weight Repack | `--repack`, `-nr` | off | Repack model weights for more efficient GPU memory usage. |
+| No Host Memory | `--no-host` | off | Disable host (CPU) memory allocation entirely. Use when VRAM is sufficient. |
+| Auto Fit | `--fit` | off | Automatically determine optimal layer offloading based on available VRAM (`on`/`off`). |
+| Fit Target | `-fitt`, `--fit-target` | — | Per-device VRAM margin in MiB to reserve when auto-fitting. |
+| Fit Min Context | `-fitc`, `--fit-ctx` | 4096 | Minimum context size to assume when auto-fitting. |
+| Op Offload | `--op-offload` | off | Offload additional operations (norms, embeddings) to GPU. |
+| CPU MoE | `--cpu-moe`, `-cmoe` | off | Run Mixture-of-Experts layers on CPU instead of GPU. |
+| N CPU MoE | `-ncmoe`, `--n-cpu-moe` | — | Number of expert layers to run on CPU. |
+| CPU MoE Draft | `--cpu-moe-draft`, `-cmoed` | off | Run draft model's MoE layers on CPU. |
+| N CPU MoE Draft | `-ncmoed`, `--n-cpu-moe-draft` | — | Number of draft expert layers to run on CPU. |
 
 ### Sampling & Generation Controls
-These settings control the "creativity" and randomness of the model output.
-*   **Temperature**: Higher values (e.g., `1.2`) increase randomness; lower values (e.g., `0.2`) make the model more deterministic.
-*   **Top-K / Top-P**: Limits the pool of potential next tokens to improve coherence.
-*   **Repeat Penalty**: Reduces the likelihood of the model repeating the same phrases.
-*   **Mirostat**: An advanced algorithm for controlling perplexity and maintaining consistent output quality.
+
+These settings control the creativity, randomness, and coherence of model output.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Samplers | `--samplers` | — | Custom sampler chain as a comma-separated list (overrides individual sampler settings). |
+| Sampler Sequence | `--sampler-seq`, `--sampling-seq` | — | Ordered sequence of samplers to apply. |
+| Seed | `-s`, `--seed` | -1 | Random seed for reproducibility. Use `-1` for random each time. |
+| Ignore EOS | `--ignore-eos` | off | Continue generating past the end-of-sequence token. |
+| Temperature | `--temp`, `--temperature` | 0.80 | Controls randomness. Higher (`1.2+`) = more creative; lower (`0.2`) = more deterministic. |
+| Top-K | `--top-k` | 40 | Limit next-token selection to the K most likely tokens. Set to `0` to disable. |
+| Top-P | `--top-p` | 0.95 | Nucleus sampling: only consider tokens within the top P probability mass. Set to `1.0` to disable. |
+| Min-P | `--min-p` | 0.0 | Minimum probability threshold relative to the best token. Set to `0.0` to disable. |
+| Top-N-Sigma | `--top-nsigma`, `--top-n-sigma` | — | Limit candidates to tokens within N standard deviations of the mean logit. |
+| XTC Probability | `--xtc-probability` | 0.0 | Xtreme Token Cutting: probability of applying the filter. Set to `0.0` to disable. |
+| XTC Threshold | `--xtc-threshold` | 1.0 | Minimum probability threshold for XTC filtering. Set to `1.0` to disable. |
+| Typical P | `--typical`, `--typical-p` | 1.0 | Locally typical sampling threshold. Set to `1.0` to disable. |
+| Repeat Last N | `--repeat-last-n` | -1 | Number of recent tokens to check for repetition. `-1` = full context size. |
+| Repeat Penalty | `--repeat-penalty` | 1.0 | Penalty multiplier for repeated tokens. `1.0` = disabled, `1.1-1.5` typical range. |
+| Presence Penalty | `--presence-penalty` | 0.0 | Flat penalty applied to any token that has appeared before. Encourages topic diversity. |
+| Frequency Penalty | `--frequency-penalty` | 0.0 | Scaled penalty based on how often a token has appeared. Discourages repetition. |
+| DRY Multiplier | `--dry-multiplier` | — | Disruption Repetition Reduction scaling factor. |
+| DRY Base | `--dry-base` | — | DRY base penalty value. |
+| DRY Allowed Length | `--dry-allowed-length` | — | Maximum repeated sequence length to ignore in DRY mode. |
+| DRY Penalty Last N | `--dry-penalty-last-n` | — | Token window for DRY repetition detection. |
+| Adaptive Target | `--adaptive-target` | — | Target value for adaptive repetition reduction. |
+| Adaptive Decay | `--adaptive-decay` | — | Decay rate for adaptive repetition adjustment. |
+| Dynamic Temp Range | `--dynatemp-range` | 0.0 | Range for dynamic temperature adjustment based on entropy. `0.0` = disabled. |
+| Dynamic Temp Exp | `--dynatemp-exp` | — | Exponent controlling the sensitivity of dynamic temperature changes. |
+| Mirostat | `--mirostat` | 0 | Advanced perplexity control: `0`=disabled, `1`=Mirostat, `2`=Mirostat 2.0. |
+| Mirostat LR | `--mirostat-lr` | 0.10 | Learning rate for the Mirostat algorithm. |
+| Mirostat Entropy | `--mirostat-ent` | 5.00 | Target entropy (information density) for Mirostat. |
+| Backend Sampling | `--backend-sampling`, `-bs` | off | Offload sampling computation to the GPU backend. |
 
 ### Context & Batching
-*   **Context Size (`-c`)**: The maximum number of tokens the model can consider. Larger contexts require significantly more VRAM.
-*   **Batch Size (`-b`)**: Controls how many tokens are processed in parallel during the prompt ingestion phase.
-*   **Parallelism (`-np`)**: Allows the server to handle multiple requests simultaneously.
+
+Control context window size, token processing, and request handling.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Context Size | `-c`, `--ctx-size` | 0 | Maximum token context window. `0` = use model default. Larger values require more VRAM. |
+| Max Predictions | `-n`, `--n-predict` | -1 | Maximum tokens to generate per request. `-1` = unlimited. |
+| Batch Size | `-b`, `--batch-size` | 2048 | Tokens processed in parallel during prompt ingestion. Larger = faster prompt processing. |
+| U-Batch Size | `-ub`, `--ubatch-size` | 512 | Internal micro-batch size for computation. Affects memory vs speed tradeoff. |
+| Keep Tokens | `--keep` | 0 | Number of initial tokens to preserve during context shifting. `-1` = keep all. |
+| Parallel Slots | `-np`, `--parallel` | 1 | Number of concurrent request slots. `-1` = auto-detect. |
+| Continuous Batching | `--cont-batching`, `-cb` | off | Enable continuous (iterative) batching for better throughput under load. |
+| Context Shift | `--context-shift` | off | Allow context shifting when the window is full (drops oldest tokens). |
+| Reverse Prompt | `-r`, `--reverse-prompt` | — | Stop generation when this prompt pattern appears in output. |
+| Special Tokens | `--special` | off | Process special/control tokens during generation instead of treating them as text. |
+| Warmup | `--warmup` | off | Run a warmup pass on model loading to pre-compile compute graphs. |
+| SPM Infill | `--spm-infill` | off | Enable SentencePiece infill mode for edit/completion tasks. |
+| Pooling | `--pooling` | — | Pooling strategy for embedding models (e.g., `none`, `mean`, `cls`). |
+| Cache Prompts | `--cache-prompt` | on | Cache processed prompts in the KV cache for reuse across requests. |
+| Cache Reuse Min | `--cache-reuse` | 0 | Minimum prefix match length to reuse cached context. `0` = disabled. |
+| Slot Prompt Similarity | `-sps`, `--slot-prompt-similarity` | 0.0 | Prefix similarity threshold for slot cache matching. `0.0` = disabled. |
+
+### CPU / Threading
+
+Fine-tune CPU utilization, thread affinity, and process priority.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Threads (Gen) | `-t`, `--threads` | -1 | CPU threads for token generation. `-1` = use default (all available). |
+| Threads (Batch) | `-tb`, `--threads-batch` | — | CPU threads for batch/prompt processing. Defaults to value of `--threads`. |
+| CPU Mask | `-C`, `--cpu-mask` | — | Hex bitmask for CPU affinity during generation (e.g., `0xF`). |
+| CPU Range | `-Cr`, `--cpu-range` | — | Comma-separated CPU core range for generation (e.g., `0-3,8-11`). |
+| Strict CPU Placement | `--cpu-strict` | off | Enforce strict CPU affinity placement. |
+| Priority | `--prio` | 0 | Process priority: `0`=normal, `-1`=low, `1`=medium, `2`=high, `3`=realtime. |
+| Poll Level | `--poll` | 50 | Thread polling aggressiveness (0-100). Higher = more responsive but more CPU usage. |
+| CPU Mask (Batch) | `-Cb`, `--cpu-mask-batch` | — | Hex bitmask for batch processing CPU affinity. |
+| CPU Range (Batch) | `-Crb`, `--cpu-range-batch` | — | Core range for batch processing affinity. |
+| Strict CPU (Batch) | `--cpu-strict-batch` | off | Enforce strict CPU affinity for batch threads. |
+| Priority (Batch) | `--prio-batch` | — | Separate priority level for batch processing threads. |
+| Poll Batch | `--poll-batch` | off | Enable polling mode for batch processing threads. |
+| NUMA Mode | `--numa` | none | Non-Uniform Memory Access mode: `none`, `distribute`, `isolate`, `numactl`. |
+| Threads (Draft) | `-td`, `--threads-draft` | — | CPU threads for draft model generation. |
+| Threads Batch (Draft) | `-tbd`, `--threads-batch-draft` | — | CPU threads for draft model batch processing. |
+
+### Memory
+
+Manage memory allocation, caching strategy, and disk I/O behavior.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| KV Cache Type K | `-ctk`, `--cache-type-k` | f16 | Data type for Key cache: `f16`, `f32`, `bf16`, `q8_0`, `q4_0`, `q5_0`. Lower precision saves VRAM. |
+| KV Cache Type V | `-ctv`, `--cache-type-v` | f16 | Data type for Value cache: same options as Key cache. |
+| KV Cache K (Draft) | `-ctkd`, `--cache-type-k-draft` | — | Key cache type for draft model in speculative decoding. |
+| KV Cache V (Draft) | `-ctvd`, `--cache-type-v-draft` | — | Value cache type for draft model. |
+| Memory Map | `--mmap` | on | Use memory-mapped I/O for loading model weights. Faster startup, lower RAM overhead. |
+| Lock Memory | `--mlock` | off | Lock model in RAM to prevent swapping. Ensures consistent performance. |
+| Direct I/O | `--direct-io`, `-dio` | off | Bypass OS page cache for model loading. Useful with large models on high-RAM systems. |
+| Defrag Threshold | `-dt`, `--defrag-thold` | — | KV cache defragmentation threshold. Reclaims fragmented memory slots. |
+| SWA Full | `--swa-full` | off | Enable full Sliding Window Attention mode for models that support it. |
+
+### Server
+
+HTTP server configuration, security, and API behavior.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Host | `--host` | 127.0.0.1 | Bind address for the HTTP server. Use `0.0.0.0` for network access. |
+| Port | `--port` | 8080 | TCP port to listen on. |
+| Reuse Port | `--reuse-port` | off | Enable SO_REUSEPORT for running multiple server instances. |
+| Static Path | `--path` | — | Directory to serve static files from. |
+| API Prefix | `--api-prefix` | — | URL path prefix for all API endpoints. |
+| Timeout | `-to`, `--timeout` | 600 | Request timeout in seconds. |
+| HTTP Threads | `--threads-http` | -1 | Number of threads for handling HTTP requests. `-1` = auto. |
+| API Key | `--api-key` | — | Bearer token required for all API requests. |
+| SSL Key File | `--ssl-key-file` | — | Path to private key file for HTTPS. |
+| SSL Cert File | `--ssl-cert-file` | — | Path to certificate file for HTTPS. |
+| Web UI | `--webui` | on | Enable the built-in web interface. Use `--no-webui` to disable. |
+| Embeddings | `--embedding`, `--embeddings` | off | Run in embeddings-only mode (disables chat/completion endpoints). |
+| Reranking | `--rerank`, `--reranking` | off | Enable reranking endpoint for search/retrieval use cases. |
+| Metrics | `--metrics` | off | Expose Prometheus-compatible metrics at `/metrics`. |
+| Props | `--props` | off | Enable model properties endpoint. |
+| Slots Endpoint | `--slots` | on | Enable the `/slots` API endpoint for slot management. |
+| Slot Save Path | `--slot-save-path` | — | Directory to persist slot state between restarts. |
+| Media Path | `--media-path` | — | Directory for serving media files in multimodal requests. |
+| LoRA Init Only | `--lora-init-without-apply` | off | Load LoRA adapters without applying them (apply later via API). |
+| Sleep Idle Sec | `--sleep-idle-seconds` | -1 | Seconds of idle time before the server enters sleep mode. `-1` = never sleep. |
+
+### Speculative Decoding
+
+Accelerate generation using a draft model or ngram-based speculation.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Draft Max Tokens | `--draft`, `--draft-max` | 16 | Maximum number of tokens the draft model proposes per step. |
+| Draft Min Tokens | `--draft-min`, `--draft-n-min` | 0 | Minimum draft tokens required before verification. |
+| Draft P Min | `--draft-p-min` | 0.75 | Minimum acceptance probability threshold for draft tokens. |
+| Draft Context Size | `-cd`, `--ctx-size-draft` | — | Context size for the draft model (defaults to main context). |
+| Devices (Draft) | `-devd`, `--device-draft` | — | GPU devices assigned to the draft model. |
+| GPU Layers (Draft) | `-ngld`, `--gpu-layers-draft` | — | Number of draft model layers to offload to GPU. |
+| Spec Type | `--spec-type` | none | Speculation method: `none`, `ngram-cache`, `ngram-simple`, `ngram-map-k`. |
+| Ngram Size N | `--spec-ngram-size-n` | 12 | Minimum n-gram size for ngram-based speculation. |
+| Ngram Size M | `--spec-ngram-size-m` | 48 | Maximum n-gram size for ngram-based speculation. |
+| Ngram Min Hits | `--spec-ngram-min-hits` | — | Minimum historical hits required before an n-gram is used for speculation. |
+| Override Tensor Draft | `-otd`, `--override-tensor-draft` | — | Tensor override pattern for the draft model. |
+
+### Chat & Templates
+
+Control chat formatting, reasoning behavior, and template handling.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Chat Template | `--chat-template` | auto | Built-in template: `auto`, `chatml`, `llama3`, `mistral-v3`, `deepseek`, `gemma`, `phi3`. |
+| Chat Template File | `--chat-template-file` | — | Path to a custom Jinja2 chat template file. |
+| Chat Template Kwargs | `--chat-template-kwargs` | — | JSON string of extra variables for the template (e.g., `{"preserve_thinking":true}`). |
+| Use Jinja | `--jinja` | off | Force use of Jinja2 templating instead of built-in templates. |
+| Reasoning Format | `--reasoning-format` | auto | Output format for reasoning models: `auto`, `none`, `deepseek`. |
+| Reasoning | `-rea`, `--reasoning` | auto | Enable/disable reasoning output: `auto`, `on`, `off`. |
+| Reasoning Budget | `--reasoning-budget` | -1 | Maximum tokens allocated for reasoning. `-1` = unrestricted. |
+| Reasoning Budget Msg | `--reasoning-budget-message` | — | Custom message appended when the reasoning budget is exceeded. |
+| Skip Chat Parsing | `--skip-chat-parsing` | off | Bypass chat template parsing and send raw content to the model. |
+| Prefill Assistant | `--prefill-assistant` | off | Prefill the assistant role token to steer generation start. |
+
+### Checkpoints & Cache
+
+Manage context checkpointing, RAM caching, and lookup strategies.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Context Checkpoints | `-ctxcp`, `--ctx-checkpoints` | 32 | Number of context checkpoints to maintain for fast recovery. |
+| Checkpoint Every N | `-cpent`, `--checkpoint-every-n-tokens` | — | Create a checkpoint every N generated tokens. |
+| Cache RAM | `-cram`, `--cache-ram` | -1 | Maximum RAM (MiB) allocated for the KV cache. `-1` = no limit. |
+| Unified KV Buffer | `--kv-unified`, `-kvu` | off | Use a single unified buffer for all KV caches instead of per-slot allocation. |
+| Cache Idle Slots | `--cache-idle-slots` | off | Preserve cached context in idle (inactive) slots. |
+| Lookup Cache Static | `-lcs`, `--lookup-cache-static` | — | Static lookup cache size for prefix matching. |
+| Lookup Cache Dynamic | `-lcd`, `--lookup-cache-dynamic` | — | Dynamic lookup cache size that scales with usage. |
+
+### Logging
+
+Control log output, formatting, and diagnostic information.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| Verbosity | `-lv`, `--log-verbosity` | 0 | Log level: `0`=generic, `1`=error, `2`=warning, `3`=info, `4`=debug. |
+| Log File | `--log-file` | — | Path to write log output to a file. |
+| Log Colors | `--log-colors` | auto | Terminal color support: `auto`, `on`, `off`. |
+| Log Prefix | `--log-prefix` | off | Prepend timestamp and level to each log line. |
+| Timestamps | `--log-timestamps` | off | Include detailed timestamps in log output. |
+| Verbose (All) | `-v`, `--verbose` | off | Enable maximum verbosity for all subsystems. |
+| Log Disable | `--log-disable` | off | Suppress all log output. |
+| Offline Mode | `--offline` | off | Disable network access (HuggingFace downloads, updates). |
+| Performance Stats | `--perf`, `--no-perf` | on | Print timing and performance statistics after generation. |
+| Escape Output | `-e`, `--escape` | off | Escape special characters in output for safe programmatic consumption. |
+
+### Advanced / Override
+
+Low-level model overrides, grammar constraints, and RoPE configuration.
+
+| Parameter | Flag(s) | Default | Description |
+|---|---|---|---|
+| RoPE Scaling | `--rope-scaling` | none | Positional encoding scaling method: `none`, `linear`, `yarn`. |
+| RoPE Scale | `--rope-scale` | — | Manual scaling factor for RoPE embeddings. |
+| RoPE Freq Base | `--rope-freq-base` | — | Override the base frequency of RoPE positional encodings. |
+| RoPE Freq Scale | `--rope-freq-scale` | — | Scale factor applied to RoPE frequencies for context extension. |
+| YaRN Orig Ctx | `--yarn-orig-ctx` | — | Original context size the model was trained on (for YaRN scaling). |
+| YaRN Ext Factor | `--yarn-ext-factor` | — | YaRN extrapolation multiplier for extending context beyond training length. |
+| YaRN Attn Factor | `--yarn-attn-factor` | — | YaRN attention scaling factor. |
+| YaRN Beta Slow | `--yarn-beta-slow` | — | YaRN interpolation beta for slow frequency components. |
+| YaRN Beta Fast | `--yarn-beta-fast` | — | YaRN interpolation beta for fast frequency components. |
+| Grammar (inline) | `--grammar` | — | Inline BNF grammar string to constrain output format. |
+| Grammar File | `--grammar-file` | — | Path to a `.gbnf` grammar file for structured output. |
+| JSON Schema (inline) | `-j`, `--json-schema` | — | Inline JSON schema to validate and constrain generated JSON. |
+| JSON Schema File | `-jf`, `--json-schema-file` | — | Path to a JSON schema file. |
+| Check Tensors | `--check-tensors` | off | Validate tensor shapes and types on model load (debugging). |
+| Image Min Tokens | `--image-min-tokens` | — | Minimum token allocation for image features in multimodal models. |
+| Image Max Tokens | `--image-max-tokens` | — | Maximum token allocation for image features. |
+
+### Complex Tables
+
+Some parameters support multiple entries and are stored as tables rather than single values.
+
+#### LoRA Adapters (`--lora`)
+Attach fine-tuned adapter weights with individual scaling factors. Each entry has a `path` to the `.bin` or `.safetensors` file and a `scale` multiplier (e.g., `1.0`).
+
+#### Logit Biases (`--logit-bias`)
+Bias specific token IDs toward or away from selection. Each entry specifies a `token_id` and a `bias_value` (positive = encourage, negative = discourage).
+
+#### Control Vectors (`--control-vector`)
+Apply directional control vectors to steer model behavior. Each entry includes a `path`, `scale`, and optional `layer_range_start` / `layer_range_end`.
+
+#### Override KV (`--override-kv`)
+Override internal model key-value parameters. Each entry has a `key_name`, `key_type` (`int`, `float`, `bool`, `str`), and `key_value`. Useful for patching model metadata without modifying the file.
+
+#### Override Tensors (`--override-tensor`)
+Replace or zero-out specific tensors by pattern match. Each entry specifies a `tensor_pattern` (regex) and `buffer_type` for the replacement buffer.
+
+#### DRY Sequence Breakers (`--dry-sequence-breaker`)
+Characters that reset the DRY repetition counter. Common values include newline (`\n`) and period (`.`).
 
 ---
 
