@@ -5,11 +5,11 @@ from services.screen_manager import get_status
 
 def get_server_pid():
     """Get PID of llama-server process. Finds it by name via pgrep."""
-    # First check if screen session is running
+    # First check if server process is running
     status = get_status()
     if not status['running']:
         return None
-    # Find llama-server by process name (it may not be a direct child of screen)
+    # Find llama-server by process name via pgrep
     try:
         import subprocess
         out = subprocess.check_output(['pgrep', '-x', 'llama-server'], text=True, stderr=subprocess.DEVNULL)
@@ -434,7 +434,7 @@ def import_running_config(config_name=None):
     """
     pid = get_server_pid()
     if not pid:
-        raise RuntimeError('No llama-server process found in screen session')
+        raise RuntimeError('No running llama-server process found')
 
     args = read_cmdline(pid)
     if not args:
