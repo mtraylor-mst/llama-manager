@@ -75,6 +75,11 @@ llama-manager/
 - Never hardcode secrets — use environment variables through `.env`.
 - Sensitive values (DB credentials, API keys) must be redacted in logs and command previews.
 
+### Documentation
+
+- New features require updates to relevant docs and README.
+- Changes to conventions, structure, or workflows must update AGENTS.md.
+
 ## Development Workflow
 
 ### Running Locally
