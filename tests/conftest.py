@@ -59,6 +59,21 @@ def mock_db():
 
 
 @pytest.fixture
+def mock_screen_manager():
+    """Patch screen_manager.get_status and get_running_version_id with sensible defaults."""
+    with patch("services.screen_manager.get_status") as mock_status:
+        mock_status.return_value = {
+            "running": False,
+            "state": "stopped",
+            "name": None,
+            "line": "",
+        }
+        with patch("services.screen_manager.get_running_version_id") as mock_running:
+            mock_running.return_value = None
+            yield {"get_status": mock_status, "get_running_version_id": mock_running}
+
+
+@pytest.fixture
 def app():
     from app import create_app
 
