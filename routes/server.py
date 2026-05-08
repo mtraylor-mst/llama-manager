@@ -154,7 +154,7 @@ def import_config():
             return redirect(url_for('configs.view', config_id=cfg_id))
         flash(f'Config imported ({len(parsed)} flags)', 'success')
         return redirect(url_for('configs.view', config_id=cfg_id))
-    except Exception as e:
+    except Exception:
         logger.error('Error importing config', exc_info=True)
         if request.headers.get('HX-Request'):
             return '<div class="alert alert-error">Import failed — check server logs for details.</div>'

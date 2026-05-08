@@ -1,11 +1,10 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 @pytest.fixture
 def app():
     from app import create_app
-    import flask_wtf.csrf
     app = create_app()
     app.config['TESTING'] = True
     # Disable CSRF for tests by exempting all view functions individually

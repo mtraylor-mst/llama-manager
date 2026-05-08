@@ -11,7 +11,7 @@ def index():
         from models.configs import get_common_options
         from template_utils import CATEGORY_FIELDS
         options = get_common_options()
-    except Exception as e:
+    except Exception:
         logger.error('Error loading common options', exc_info=True)
         flash('Error loading common options. Have you run the schema migration?', 'error')
         options = []
@@ -65,7 +65,7 @@ def toggle():
             return jsonify({'error': 'Option not found'}), 404
 
         return jsonify({'common': currently_common})
-    except Exception as e:
+    except Exception:
         logger.error('Error toggling common option', exc_info=True)
         return jsonify({'error': 'Failed to toggle option'}), 500
 

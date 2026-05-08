@@ -100,7 +100,7 @@ def run_benchmark(host, port, prompt=TEST_PROMPT, n_tokens=TEST_N_TOKENS):
 
     except urllib.error.URLError:
         return {'tps': 0, 'tokens_generated': 0, 'duration_sec': 0, 'error': 'Connection failed — is llama-server running?'}
-    except Exception as e:
+    except Exception:
         logger.error('Benchmark failed', exc_info=True)
         return {'tps': 0, 'tokens_generated': 0, 'duration_sec': 0, 'error': 'Benchmark failed unexpectedly'}
 

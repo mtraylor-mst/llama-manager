@@ -20,11 +20,12 @@ def _read_pid():
             lines = f.read().strip().split('\n')
         pid = int(lines[0])
         vid = int(lines[1]) if len(lines) > 1 and lines[1].isdigit() else None
-        # Check if process is actually running
-        os.kill(pid, 0)
-        return pid, vid
+        # Check if process is actually running and owned by us
+        if _is_our_process(pid):
+            return pid, vid
     except (ValueError, ProcessLookupError, PermissionError, OSError):
-        return None, None
+        pass
+    return None, None
 
 
 def _cleanup_pid():
@@ -42,8 +43,64 @@ def get_log_file(version_id=None):
     return '/tmp/llama-server.log'
 
 
+def _is_our_process(pid):
+    """Check if a PID belongs to a llama-server process owned by the current user.
+
+    Verifies:
+    1. The process is signalable by us.
+    2. The process UID matches our UID.
+    3. The command name contains 'llama-server'.
+
+    Returns True only if all checks pass.
+    """
+    try:
+        os.kill(pid, 0)
+    except (ProcessLookupError, PermissionError, OSError):
+        return False
+
+    # Verify the process is owned by our user
+    try:
+        with open(f'/proc/{pid}/status', 'r') as f:
+            found_uid = False
+            for line in f.readlines():
+                if line.startswith('Uid:'):
+                    proc_uid = int(line.split()[1])
+                    if proc_uid != os.getuid():
+                        return False
+                    found_uid = True
+                    break
+            if not found_uid:
+                return False
+    except (FileNotFoundError, PermissionError, ValueError, OSError):
+        return False
+
+    # Verify the command name is llama-server
+    try:
+        with open(f'/proc/{pid}/comm', 'r') as f:
+            comm = f.read().strip()
+            if 'llama-server' not in comm:
+                return False
+    except (FileNotFoundError, PermissionError, OSError):
+        return False
+
+    return True
+
+
+def _extract_version_id_from_log(log_path):
+    """Extract version_id from a log file path like /tmp/llama-server-42.log."""
+    base = os.path.basename(log_path).replace('.log', '')
+    vid_str = None
+    for prefix in ['llama-server-', 'llama-server']:
+        if base.startswith(prefix):
+            vid_str = base[len(prefix):]
+            break
+    return int(vid_str) if vid_str and vid_str.isdigit() else None
+
+
 def _find_running():
     """Find any running llama-server process we own.
+
+    This is a read-only operation — it does not mutate state.
 
     Returns (pid, version_id) or (None, None).
     """
@@ -65,10 +122,9 @@ def _find_running():
                 for p in pids:
                     try:
                         p = int(p)
-                        os.kill(p, 0)
-                        base = os.path.basename(log_path)
-                        vid = base.replace('llama-server-', '').replace('.log', '')
-                        return p, int(vid) if vid.isdigit() else None
+                        if _is_our_process(p):
+                            vid = _extract_version_id_from_log(log_path)
+                            return p, vid
                     except (ValueError, ProcessLookupError):
                         continue
         except Exception:
@@ -84,22 +140,13 @@ def _find_running():
             for p in result.stdout.strip().split('\n'):
                 try:
                     p = int(p)
-                    os.kill(p, 0)
+                    if not _is_our_process(p):
+                        continue
                     # Determine version_id from stdout log file via /proc/pid/fd/1
                     fd_target = os.readlink(f'/proc/{p}/fd/1')
                     if fd_target.startswith('/tmp/llama-server-'):
-                        vid_str = os.path.basename(fd_target).replace('.log', '')
-                        vid = None
-                        for prefix in ['llama-server-', 'llama-server']:
-                            if vid_str.startswith(prefix):
-                                remainder = vid_str[len(prefix):]
-                                vid = int(remainder) if remainder.isdigit() else None
-                                break
-                        _write_pid(p, vid)
+                        vid = _extract_version_id_from_log(fd_target)
                         return p, vid
-                    # Process is running but not using our log file convention
-                    _write_pid(p, None)
-                    return p, None
                 except (ValueError, ProcessLookupError, OSError):
                     continue
     except (FileNotFoundError, subprocess.TimeoutExpired):
