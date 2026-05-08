@@ -10,6 +10,11 @@ csrf = CSRFProtect()
 
 
 def create_app():
+    if AUTH_ENABLED and (not AUTH_USER or not AUTH_PASSWORD):
+        raise RuntimeError(
+            "AUTH_ENABLED is true but AUTH_USER and AUTH_PASSWORD must both be set"
+        )
+
     app = Flask(__name__)
     app.secret_key = SECRET_KEY
     # Session cookie security
