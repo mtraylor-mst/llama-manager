@@ -179,7 +179,7 @@ def delete(version_id):
     return redirect(url_for("configs.view", config_id=version["config_id"]))
 
 
-def _save_version_data(version_id, config_id):
+def _save_version_data(version_id, config_id, form_data=None):
     from models.configs import (
         CATEGORIES,
         COMPLEX_TABLES,
@@ -187,15 +187,17 @@ def _save_version_data(version_id, config_id):
         save_complex_table,
     )
 
+    form = form_data if form_data is not None else request.form
+
     # Save comments and status
     from models.base import get_conn
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            status_val = request.form.get("status") or None
+            status_val = form.get("status") or None
             cur.execute(
                 "UPDATE config_versions SET comments = %s, status = %s WHERE id = %s",
-                (request.form.get("comments", ""), status_val, version_id),
+                (form.get("comments", ""), status_val, version_id),
             )
             conn.commit()
 
@@ -203,7 +205,7 @@ def _save_version_data(version_id, config_id):
     for cat in CATEGORIES:
         prefix = f"{cat}_"
         data = {}
-        for key, val in request.form.items():
+        for key, val in form.items():
             if key.startswith(prefix):
                 col = key[len(prefix) :]
                 if val == "" or val == "None":
@@ -226,7 +228,7 @@ def _save_version_data(version_id, config_id):
     # Save complex tables
     for tbl in COMPLEX_TABLES:
         rows = []
-        ids_key = request.form.get(f"{tbl}_ids")
+        ids_key = form.get(f"{tbl}_ids")
         if ids_key:
             row_ids = ids_key.split(",")
             for rid in row_ids:
@@ -234,7 +236,7 @@ def _save_version_data(version_id, config_id):
                 if not rid:
                     continue
                 row = {}
-                for key, val in request.form.items():
+                for key, val in form.items():
                     if key.startswith(f"{tbl}_{rid}_"):
                         col = key[len(f"{tbl}_{rid}_") :]
                         row[col] = val if val else None
@@ -290,12 +292,12 @@ def _edit_form(version, config, data=None, is_fork=False):
                             )
                 conn.commit()
 
-            _save_version_data(new_vid, config_id)
+            _save_version_data(new_vid, config_id, request.form)
             flash("Version saved", "success")
             return redirect(url_for("configs.view", config_id=config_id))
         else:
             # Existing version edit
-            _save_version_data(version["id"], version["config_id"])
+            _save_version_data(version["id"], version["config_id"], request.form)
             flash("Version saved", "success")
             return redirect(url_for("configs.view", config_id=version["config_id"]))
 

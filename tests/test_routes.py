@@ -103,6 +103,21 @@ class TestServerRoutes:
         assert data["tps"] == 50.0
 
 
+class TestAPIPathTraversal:
+    @patch("os.path.realpath")
+    def test_list_models_path_traversal_denied(self, mock_realpath, client):
+        def resolve_path(p):
+            if "../../etc" in p or "../etc" in p:
+                return "/etc/passwd"
+            return p
+
+        mock_realpath.side_effect = resolve_path
+        resp = client.get("/api/models?dir=../../etc")
+        assert resp.status_code == 403
+        data = resp.get_json()
+        assert "error" in data
+
+
 class TestIndexRoute:
     @patch("models.configs.get_all_configs")
     @patch("models.configs.get_version")
