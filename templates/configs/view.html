@@ -200,10 +200,28 @@ async function runBenchmark(versionId, btn) {
 
 function copyCommand(id, btn) {
     const input = document.getElementById('cmd-' + id);
-    navigator.clipboard.writeText(input.value).then(() => {
+    if (!input.value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => {
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 1500);
+        }).catch(() => fallbackCopy(input, btn));
+    } else {
+        fallbackCopy(input, btn);
+    }
+}
+
+function fallbackCopy(input, btn) {
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try {
+        document.execCommand('copy');
         btn.textContent = 'Copied!';
         setTimeout(() => btn.textContent = 'Copy', 1500);
-    });
+    } catch (e) {
+        btn.textContent = 'Failed';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+    }
 }
 </script>
 {% endblock %}
