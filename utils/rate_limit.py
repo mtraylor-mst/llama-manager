@@ -40,7 +40,8 @@ def rate_limit(key_func=None, max_calls=1, period=60):
         period: Time window in seconds.
     """
     if key_func is None:
-        key_func = lambda req: req.path
+        def key_func(req):
+            return req.path
 
     def decorator(f):
         @wraps(f)

@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from config import DEBUG
-from app import create_app
+from config import DEBUG # noqa: E402
+from app import create_app # noqa: E402
 
 app = create_app()
 
