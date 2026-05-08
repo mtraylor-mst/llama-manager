@@ -40,6 +40,7 @@ def rate_limit(key_func=None, max_calls=1, period=60):
         period: Time window in seconds.
     """
     if key_func is None:
+
         def key_func(req):
             return req.path
 
@@ -47,21 +48,24 @@ def rate_limit(key_func=None, max_calls=1, period=60):
         @wraps(f)
         def wrapped(*args, **kwargs):
             from flask import request
-            key = f'{request.method}:{key_func(request)}'
+
+            key = f"{request.method}:{key_func(request)}"
             allowed, retry_after = _limiter.is_allowed(key, max_calls, period)
 
             if not allowed:
-                is_htmx = request.headers.get('HX-Request')
-                msg = f'Too frequent. Try again in {retry_after:.0f}s.'
+                is_htmx = request.headers.get("HX-Request")
+                msg = f"Too frequent. Try again in {retry_after:.0f}s."
                 if is_htmx:
                     return f'<div class="alert alert-warning">{msg}</div>', 429
-                if request.accept_mimetypes.best.startswith('application/json'):
-                    return jsonify({'error': msg}), 429
+                if request.accept_mimetypes.best.startswith("application/json"):
+                    return jsonify({"error": msg}), 429
                 from flask import flash, redirect, url_for
-                flash(msg, 'warning')
-                return redirect(request.referrer or url_for('index'))
+
+                flash(msg, "warning")
+                return redirect(request.referrer or url_for("index"))
 
             return f(*args, **kwargs)
 
         return wrapped
+
     return decorator

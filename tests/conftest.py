@@ -53,6 +53,6 @@ class MockConnection:
 @pytest.fixture
 def mock_db():
     """Patch models.base.get_conn to return a mock connection."""
-    with patch('models.base.get_conn') as mock_conn:
+    with patch("models.base.get_conn") as mock_conn:
         mock_conn.return_value = MockConnection()
         yield mock_conn

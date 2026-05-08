@@ -21,17 +21,32 @@ class TestRenderField:
     def test_text_field(self):
         html = render_field("model_loading", "model_path", "/path/to/model.gguf")
         assert 'type="text"' in html
-        assert '/path/to/model.gguf' in html
+        assert "/path/to/model.gguf" in html
 
     def test_bool_checked(self):
-        html = render_field("memory", "mmap", 1)
+        html = render_field("memory", "mlock", 1)
         assert "checked" in html
         assert 'type="checkbox"' in html
 
     def test_bool_unchecked(self):
-        html = render_field("memory", "mmap", 0)
+        html = render_field("memory", "mlock", 0)
         assert "checked" not in html
         assert 'type="checkbox"' in html
+
+    def test_tristate_enabled(self):
+        html = render_field("memory", "mmap", 1)
+        assert "<select" in html
+        assert 'value="enable" selected' in html
+
+    def test_tristate_disabled(self):
+        html = render_field("memory", "mmap", 0)
+        assert "<select" in html
+        assert 'value="disable" selected' in html
+
+    def test_tristate_default(self):
+        html = render_field("memory", "mmap", None)
+        assert "<select" in html
+        assert 'value="" selected' in html
 
     def test_select_field(self):
         html = render_field("cpu_threading", "prio", "2")
@@ -49,7 +64,7 @@ class TestRenderField:
         assert 'value="testval"' in html
 
     def test_html_escaping(self):
-        html = render_field("model_loading", "model_path", '<script>alert(1)</script>')
+        html = render_field("model_loading", "model_path", "<script>alert(1)</script>")
         assert "<script>" not in html
         assert "&lt;script&gt;" in html
 
