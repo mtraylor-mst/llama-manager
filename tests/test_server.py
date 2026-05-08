@@ -143,6 +143,15 @@ class TestBenchmark:
         mock_bench.assert_called_once_with(1)
 
 
+class TestStreamLogs:
+    def test_stream_logs_response_headers(self, client):
+        resp = client.get("/server/stream-logs")
+        assert resp.status_code == 200
+        assert "text/event-stream" in resp.content_type
+        assert resp.headers.get("Cache-Control") == "no-cache"
+        assert resp.headers.get("X-Accel-Buffering") == "no"
+
+
 class TestImportConfig:
     @patch("services.config_importer.import_running_config")
     def test_import_config_success_htmx(self, mock_import, client):

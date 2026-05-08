@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 
 def _make_version_data():
@@ -344,3 +344,124 @@ class TestCommonOptionsHelpers:
 
         result = get_common_options_grouped()
         assert result == []
+
+
+class TestEditFormPostFork:
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.configs.create_version")
+    @patch("models.configs.get_all_version_data")
+    @patch("models.base.get_conn")
+    @patch("models.configs.get_version")
+    def test_fork_post_creates_new_version(
+        self,
+        mock_version,
+        mock_get_conn,
+        mock_data,
+        mock_create_ver,
+        mock_save_cat,
+        mock_save_complex,
+        client,
+    ):
+        mock_version.return_value = _make_version(1)
+        mock_data.return_value = _make_version_data()
+        mock_create_ver.return_value = 99
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        resp = client.post(
+            "/version/1/fork-edit",
+            data={"comments": "forked version"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert "config/1" in resp.location
+        mock_create_ver.assert_called_once()
+
+
+class TestSaveVersionData:
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.base.get_conn")
+    def test_save_version_data_basic(
+        self, mock_get_conn, mock_save_cat, mock_save_complex
+    ):
+        from routes.versions import _save_version_data
+
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        form_data = {
+            "comments": "test comments",
+            "status": "tested",
+            "model_loading_model_path": "/models/test.gguf",
+            "sampling_temperature": "0.8",
+        }
+        _save_version_data(10, 1, form_data)
+
+        mock_save_cat.assert_called()
+        calls = mock_save_cat.call_args_list
+        cats_saved = [c[0][1] for c in calls]
+        assert "model_loading" in cats_saved
+        assert "sampling" in cats_saved
+
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.base.get_conn")
+    def test_save_version_data_tristate(
+        self, mock_get_conn, mock_save_cat, mock_save_complex
+    ):
+        from routes.versions import _save_version_data
+
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        form_data = {
+            "comments": "",
+            "status": None,
+            "memory_mmap": "enable",
+            "memory_mlock": "1",
+        }
+        _save_version_data(10, 1, form_data)
+
+        calls = mock_save_cat.call_args_list
+        mem_call = [c for c in calls if c[0][1] == "memory"][0]
+        data = mem_call[0][2]
+        assert data["mmap"] == 1
+        assert data["mlock"] == 1
+
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.base.get_conn")
+    def test_save_version_data_complex_table(
+        self, mock_get_conn, mock_save_cat, mock_save_complex
+    ):
+        from routes.versions import _save_version_data
+
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        form_data = {
+            "comments": "",
+            "status": None,
+            "lora_adapters_ids": "0",
+            "lora_adapters_0_path": "/lora/test.gguf",
+            "lora_adapters_0_scale": "0.5",
+        }
+        _save_version_data(10, 1, form_data)
+
+        mock_save_complex.assert_called()
+        lora_call = [
+            c for c in mock_save_complex.call_args_list if c[0][1] == "lora_adapters"
+        ][0]
+        rows = lora_call[0][2]
+        assert len(rows) == 1
+        assert rows[0]["path"] == "/lora/test.gguf"
