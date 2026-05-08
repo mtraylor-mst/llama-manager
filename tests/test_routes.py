@@ -1,24 +1,4 @@
-import pytest
 from unittest.mock import patch
-
-
-@pytest.fixture
-def app():
-    from app import create_app
-
-    app = create_app()
-    app.config["TESTING"] = True
-    # Disable CSRF for tests by exempting all view functions individually
-    csrf = app.extensions.get("csrf")
-    if csrf:
-        for func in app.view_functions.values():
-            csrf.exempt(func)
-    return app
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
 
 
 class TestAPIRoutes:
