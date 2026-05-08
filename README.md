@@ -39,8 +39,8 @@ For detailed prerequisites, virtual environment setup, and database initializati
 | `LLAMA_SERVER_BINARY` | `/usr/local/bin/llama-server` | Path to llama.cpp server binary |
 | `LLAMA_SECRET_KEY` | *(random)* | Flask secret key for sessions |
 | `AUTH_ENABLED` | `false` | Enable HTTP Basic Auth |
-| `AUTH_USER` | | Auth username |
-| `AUTH_PASSWORD` | | Auth password |
+| `AUTH_USER` | `username` | Auth username |
+| `AUTH_PASSWORD` | `password` | Auth password |
 | `DEBUG` | `false` | Flask debug mode |
 
 ## Usage

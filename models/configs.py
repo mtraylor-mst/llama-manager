@@ -2,145 +2,279 @@ from models.base import get_conn
 
 
 CATEGORIES = [
-    'model_loading',
-    'context_batching',
-    'cpu_threading',
-    'gpu_device',
-    'memory',
-    'sampling',
-    'server',
-    'speculative',
-    'chat_templates',
-    'checkpoints',
-    'logging',
-    'advanced',
+    "model_loading",
+    "context_batching",
+    "cpu_threading",
+    "gpu_device",
+    "memory",
+    "sampling",
+    "server",
+    "speculative",
+    "chat_templates",
+    "checkpoints",
+    "logging",
+    "advanced",
 ]
 
 COMPLEX_TABLES = [
-    'logit_biases',
-    'lora_adapters',
-    'control_vectors',
-    'override_kv',
-    'override_tensors',
-    'dry_sequence_breakers',
+    "logit_biases",
+    "lora_adapters",
+    "control_vectors",
+    "override_kv",
+    "override_tensors",
+    "dry_sequence_breakers",
 ]
 
 CATEGORY_COLUMNS = {
-    'model_loading': {
-        'model_path', 'model_url', 'hf_repo', 'hf_file', 'hf_token',
-        'lora_paths', 'control_vector_paths', 'model_draft', 'model_vocoder',
-        'mmproj_path', 'mmproj_url', 'mmproj_auto', 'mmproj_offload',
-        'aliases', 'tags',
+    "model_loading": {
+        "model_path",
+        "model_url",
+        "hf_repo",
+        "hf_file",
+        "hf_token",
+        "lora_paths",
+        "control_vector_paths",
+        "model_draft",
+        "model_vocoder",
+        "mmproj_path",
+        "mmproj_url",
+        "mmproj_auto",
+        "mmproj_offload",
+        "aliases",
+        "tags",
     },
-    'context_batching': {
-        'ctx_size', 'n_predict', 'batch_size', 'ubatch_size', 'keep_tokens',
-        'n_parallel', 'cont_batching', 'context_shift', 'reverse_prompt',
-        'special_tokens', 'warmup', 'spm_infill', 'pooling', 'cache_prompt',
-        'cache_reuse', 'slot_prompt_similarity',
+    "context_batching": {
+        "ctx_size",
+        "n_predict",
+        "batch_size",
+        "ubatch_size",
+        "keep_tokens",
+        "n_parallel",
+        "cont_batching",
+        "context_shift",
+        "reverse_prompt",
+        "special_tokens",
+        "warmup",
+        "spm_infill",
+        "pooling",
+        "cache_prompt",
+        "cache_reuse",
+        "slot_prompt_similarity",
     },
-    'cpu_threading': {
-        'threads', 'threads_batch', 'cpu_mask', 'cpu_range', 'cpu_strict',
-        'prio', 'poll', 'cpu_mask_batch', 'cpu_range_batch',
-        'cpu_strict_batch', 'prio_batch', 'poll_batch', 'numa',
-        'threads_draft', 'threads_batch_draft',
+    "cpu_threading": {
+        "threads",
+        "threads_batch",
+        "cpu_mask",
+        "cpu_range",
+        "cpu_strict",
+        "prio",
+        "poll",
+        "cpu_mask_batch",
+        "cpu_range_batch",
+        "cpu_strict_batch",
+        "prio_batch",
+        "poll_batch",
+        "numa",
+        "threads_draft",
+        "threads_batch_draft",
     },
-    'gpu_device': {
-        'gpu_layers', 'devices', 'split_mode', 'tensor_split', 'main_gpu',
-        'flash_attn', 'kv_offload', 'repack', 'no_host', 'fit', 'fit_target',
-        'fit_ctx', 'op_offload', 'cpu_moe', 'n_cpu_moe',
-        'cpu_moe_draft', 'n_cpu_moe_draft',
+    "gpu_device": {
+        "gpu_layers",
+        "devices",
+        "split_mode",
+        "tensor_split",
+        "main_gpu",
+        "flash_attn",
+        "kv_offload",
+        "repack",
+        "no_host",
+        "fit",
+        "fit_target",
+        "fit_ctx",
+        "op_offload",
+        "cpu_moe",
+        "n_cpu_moe",
+        "cpu_moe_draft",
+        "n_cpu_moe_draft",
     },
-    'memory': {
-        'cache_type_k', 'cache_type_v', 'cache_type_k_draft', 'cache_type_v_draft',
-        'mmap', 'mlock', 'direct_io', 'defrag_thold', 'swa_full',
+    "memory": {
+        "cache_type_k",
+        "cache_type_v",
+        "cache_type_k_draft",
+        "cache_type_v_draft",
+        "mmap",
+        "mlock",
+        "direct_io",
+        "defrag_thold",
+        "swa_full",
     },
-    'sampling': {
-        'samplers', 'sampler_seq', 'seed', 'ignore_eos', 'temperature',
-        'top_k', 'top_p', 'min_p', 'top_n_sigma', 'xtc_probability',
-        'xtc_threshold', 'typical_p', 'repeat_last_n', 'repeat_penalty',
-        'presence_penalty', 'frequency_penalty', 'dry_multiplier', 'dry_base',
-        'dry_allowed_length', 'dry_penalty_last_n', 'adaptive_target',
-        'adaptive_decay', 'dynatemp_range', 'dynatemp_exp',
-        'mirostat', 'mirostat_lr', 'mirostat_ent', 'backend_sampling',
+    "sampling": {
+        "samplers",
+        "sampler_seq",
+        "seed",
+        "ignore_eos",
+        "temperature",
+        "top_k",
+        "top_p",
+        "min_p",
+        "top_n_sigma",
+        "xtc_probability",
+        "xtc_threshold",
+        "typical_p",
+        "repeat_last_n",
+        "repeat_penalty",
+        "presence_penalty",
+        "frequency_penalty",
+        "dry_multiplier",
+        "dry_base",
+        "dry_allowed_length",
+        "dry_penalty_last_n",
+        "adaptive_target",
+        "adaptive_decay",
+        "dynatemp_range",
+        "dynatemp_exp",
+        "mirostat",
+        "mirostat_lr",
+        "mirostat_ent",
+        "backend_sampling",
     },
-    'server': {
-        'host', 'port', 'reuse_port', 'static_path', 'api_prefix', 'timeout',
-        'threads_http', 'api_key', 'ssl_key_file', 'ssl_cert_file',
-        'webui', 'webui_config', 'webui_config_file', 'webui_mcp_proxy',
-        'tools', 'embedding', 'reranking', 'metrics', 'props', 'slots',
-        'slot_save_path', 'media_path', 'cache_prompt',
-        'lora_init_without_apply', 'sleep_idle_seconds',
+    "server": {
+        "host",
+        "port",
+        "reuse_port",
+        "static_path",
+        "api_prefix",
+        "timeout",
+        "threads_http",
+        "api_key",
+        "ssl_key_file",
+        "ssl_cert_file",
+        "webui",
+        "webui_config",
+        "webui_config_file",
+        "webui_mcp_proxy",
+        "tools",
+        "embedding",
+        "reranking",
+        "metrics",
+        "props",
+        "slots",
+        "slot_save_path",
+        "media_path",
+        "cache_prompt",
+        "lora_init_without_apply",
+        "sleep_idle_seconds",
     },
-    'speculative': {
-        'draft_max', 'draft_min', 'draft_p_min', 'ctx_size_draft',
-        'devices_draft', 'gpu_layers_draft', 'spec_type',
-        'spec_ngram_size_n', 'spec_ngram_size_m', 'spec_ngram_min_hits',
-        'spec_replace_target', 'spec_replace_draft', 'override_tensor_draft',
+    "speculative": {
+        "draft_max",
+        "draft_min",
+        "draft_p_min",
+        "ctx_size_draft",
+        "devices_draft",
+        "gpu_layers_draft",
+        "spec_type",
+        "spec_ngram_size_n",
+        "spec_ngram_size_m",
+        "spec_ngram_min_hits",
+        "spec_replace_target",
+        "spec_replace_draft",
+        "override_tensor_draft",
     },
-    'chat_templates': {
-        'chat_template', 'chat_template_file', 'chat_template_kwargs',
-        'jinja', 'reasoning_format', 'reasoning', 'reasoning_budget',
-        'reasoning_budget_message', 'skip_chat_parsing', 'prefill_assistant',
-        'backend_sampling',
+    "chat_templates": {
+        "chat_template",
+        "chat_template_file",
+        "chat_template_kwargs",
+        "jinja",
+        "reasoning_format",
+        "reasoning",
+        "reasoning_budget",
+        "reasoning_budget_message",
+        "skip_chat_parsing",
+        "prefill_assistant",
+        "backend_sampling",
     },
-    'checkpoints': {
-        'ctx_checkpoints', 'checkpoint_every_nt', 'cache_ram', 'kv_unified',
-        'cache_idle_slots', 'lookup_cache_static', 'lookup_cache_dynamic',
+    "checkpoints": {
+        "ctx_checkpoints",
+        "checkpoint_every_nt",
+        "cache_ram",
+        "kv_unified",
+        "cache_idle_slots",
+        "lookup_cache_static",
+        "lookup_cache_dynamic",
     },
-    'logging': {
-        'log_verbosity', 'log_file', 'log_colors', 'log_prefix',
-        'log_timestamps', 'verbose', 'log_disable', 'offline', 'perf',
-        'escape',
+    "logging": {
+        "log_verbosity",
+        "log_file",
+        "log_colors",
+        "log_prefix",
+        "log_timestamps",
+        "verbose",
+        "log_disable",
+        "offline",
+        "perf",
+        "escape",
     },
-    'advanced': {
-        'rope_scaling', 'rope_scale', 'rope_freq_base', 'rope_freq_scale',
-        'yarn_orig_ctx', 'yarn_ext_factor', 'yarn_attn_factor',
-        'yarn_beta_slow', 'yarn_beta_fast', 'grammar', 'grammar_file',
-        'json_schema', 'json_schema_file', 'check_tensors',
-        'image_min_tokens', 'image_max_tokens', 'pooling_override',
+    "advanced": {
+        "rope_scaling",
+        "rope_scale",
+        "rope_freq_base",
+        "rope_freq_scale",
+        "yarn_orig_ctx",
+        "yarn_ext_factor",
+        "yarn_attn_factor",
+        "yarn_beta_slow",
+        "yarn_beta_fast",
+        "grammar",
+        "grammar_file",
+        "json_schema",
+        "json_schema_file",
+        "check_tensors",
+        "image_min_tokens",
+        "image_max_tokens",
+        "pooling_override",
     },
 }
 
 COMPLEX_TABLE_COLUMNS = {
-    'logit_biases': {'token_id', 'bias_value'},
-    'lora_adapters': {'path', 'scale'},
-    'control_vectors': {'path', 'scale', 'layer_range_start', 'layer_range_end'},
-    'override_kv': {'key_name', 'key_type', 'key_value'},
-    'override_tensors': {'tensor_pattern', 'buffer_type'},
-    'dry_sequence_breakers': {'breaker_char'},
+    "logit_biases": {"token_id", "bias_value"},
+    "lora_adapters": {"path", "scale"},
+    "control_vectors": {"path", "scale", "layer_range_start", "layer_range_end"},
+    "override_kv": {"key_name", "key_type", "key_value"},
+    "override_tensors": {"tensor_pattern", "buffer_type"},
+    "dry_sequence_breakers": {"breaker_char"},
 }
 
 
 def get_all_configs():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM configs ORDER BY name')
+            cur.execute("SELECT * FROM configs ORDER BY name")
             return cur.fetchall()
 
 
 def get_config(cfg_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM configs WHERE id = %s', (cfg_id,))
+            cur.execute("SELECT * FROM configs WHERE id = %s", (cfg_id,))
             return cur.fetchone()
 
 
-def create_config(name, description='', model_dir=''):
+def create_config(name, description="", model_dir=""):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'INSERT INTO configs (name, description, model_dir) VALUES (%s, %s, %s)',
+                "INSERT INTO configs (name, description, model_dir) VALUES (%s, %s, %s)",
                 (name, description, model_dir),
             )
             conn.commit()
             return cur.lastrowid
 
 
-def update_config(cfg_id, name, description='', model_dir=''):
+def update_config(cfg_id, name, description="", model_dir=""):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'UPDATE configs SET name=%s, description=%s, model_dir=%s WHERE id=%s',
+                "UPDATE configs SET name=%s, description=%s, model_dir=%s WHERE id=%s",
                 (name, description, model_dir, cfg_id),
             )
             conn.commit()
@@ -149,7 +283,7 @@ def update_config(cfg_id, name, description='', model_dir=''):
 def delete_config(cfg_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute('DELETE FROM configs WHERE id = %s', (cfg_id,))
+            cur.execute("DELETE FROM configs WHERE id = %s", (cfg_id,))
             conn.commit()
 
 
@@ -157,8 +291,8 @@ def get_version(version_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT cv.*, c.name as config_name FROM config_versions cv '
-                'JOIN configs c ON c.id = cv.config_id WHERE cv.id = %s',
+                "SELECT cv.*, c.name as config_name FROM config_versions cv "
+                "JOIN configs c ON c.id = cv.config_id WHERE cv.id = %s",
                 (version_id,),
             )
             return cur.fetchone()
@@ -168,8 +302,8 @@ def get_latest_version(config_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT * FROM config_versions WHERE config_id = %s '
-                'ORDER BY version_number DESC LIMIT 1',
+                "SELECT * FROM config_versions WHERE config_id = %s "
+                "ORDER BY version_number DESC LIMIT 1",
                 (config_id,),
             )
             return cur.fetchone()
@@ -179,7 +313,7 @@ def delete_version(version_id):
     """Delete a version. CASCADE handles all child tables."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute('DELETE FROM config_versions WHERE id = %s', (version_id,))
+            cur.execute("DELETE FROM config_versions WHERE id = %s", (version_id,))
             conn.commit()
             return cur.rowcount > 0
 
@@ -188,8 +322,8 @@ def get_all_versions(config_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT * FROM config_versions WHERE config_id = %s '
-                'ORDER BY version_number DESC',
+                "SELECT * FROM config_versions WHERE config_id = %s "
+                "ORDER BY version_number DESC",
                 (config_id,),
             )
             return cur.fetchall()
@@ -199,27 +333,27 @@ def next_version_number(config_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT COALESCE(MAX(version_number), 0) + 1 FROM config_versions '
-                'WHERE config_id = %s',
+                "SELECT COALESCE(MAX(version_number), 0) + 1 FROM config_versions "
+                "WHERE config_id = %s",
                 (config_id,),
             )
-            return cur.fetchone()['COALESCE(MAX(version_number), 0) + 1']
+            return cur.fetchone()["COALESCE(MAX(version_number), 0) + 1"]
 
 
-def create_version(config_id, comments=''):
+def create_version(config_id, comments=""):
     vn = next_version_number(config_id)
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'INSERT INTO config_versions (config_id, version_number, comments) '
-                'VALUES (%s, %s, %s)',
+                "INSERT INTO config_versions (config_id, version_number, comments) "
+                "VALUES (%s, %s, %s)",
                 (config_id, vn, comments),
             )
             conn.commit()
             return cur.lastrowid
 
 
-def duplicate_version(source_version_id, config_id, comments=''):
+def duplicate_version(source_version_id, config_id, comments=""):
     """Copy all category data from source version to a new version."""
     version_id = create_version(config_id, comments)
 
@@ -227,30 +361,34 @@ def duplicate_version(source_version_id, config_id, comments=''):
         with conn.cursor() as cur:
             # Copy each category table
             for cat in CATEGORIES:
-                table = f'v_{cat}'
-                cur.execute(f'SELECT * FROM {table} WHERE version_id = %s', (source_version_id,))
+                table = f"v_{cat}"
+                cur.execute(
+                    f"SELECT * FROM {table} WHERE version_id = %s", (source_version_id,)
+                )
                 row = cur.fetchone()
                 if row:
-                    row.pop('version_id', None)
-                    cols = ', '.join(row.keys())
-                    placeholders = ', '.join(['%s'] * len(row))
+                    row.pop("version_id", None)
+                    cols = ", ".join(row.keys())
+                    placeholders = ", ".join(["%s"] * len(row))
                     cur.execute(
-                        f'INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})',
+                        f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
                         (version_id,) + tuple(row.values()),
                     )
 
             # Copy complex tables
             for tbl in COMPLEX_TABLES:
-                table = f'v_{tbl}'
-                cur.execute(f'SELECT * FROM {table} WHERE version_id = %s', (source_version_id,))
+                table = f"v_{tbl}"
+                cur.execute(
+                    f"SELECT * FROM {table} WHERE version_id = %s", (source_version_id,)
+                )
                 rows = cur.fetchall()
                 for row in rows:
-                    row.pop('id', None)
-                    row.pop('version_id', None)
-                    cols = ', '.join(row.keys())
-                    placeholders = ', '.join(['%s'] * len(row))
+                    row.pop("id", None)
+                    row.pop("version_id", None)
+                    cols = ", ".join(row.keys())
+                    placeholders = ", ".join(["%s"] * len(row))
                     cur.execute(
-                        f'INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})',
+                        f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
                         (version_id,) + tuple(row.values()),
                     )
 
@@ -263,26 +401,26 @@ def save_category(version_id, category, data):
     """Save a category table row. data is a dict of column->value."""
     allowed = CATEGORY_COLUMNS.get(category, set())
     data = {k: v for k, v in data.items() if k in allowed}
-    table = f'v_{category}'
+    table = f"v_{category}"
     with get_conn() as conn:
         with conn.cursor() as cur:
             # Check if row exists
-            cur.execute(f'SELECT * FROM {table} WHERE version_id = %s', (version_id,))
+            cur.execute(f"SELECT * FROM {table} WHERE version_id = %s", (version_id,))
             existing = cur.fetchone()
 
-            cols = ', '.join(data.keys())
-            placeholders = ', '.join(['%s'] * len(data))
+            cols = ", ".join(data.keys())
+            placeholders = ", ".join(["%s"] * len(data))
             values = tuple(data.values())
 
             if existing:
-                set_clauses = ', '.join([f'{c} = %s' for c in data.keys()])
+                set_clauses = ", ".join([f"{c} = %s" for c in data.keys()])
                 cur.execute(
-                    f'UPDATE {table} SET {set_clauses} WHERE version_id = %s',
+                    f"UPDATE {table} SET {set_clauses} WHERE version_id = %s",
                     values + (version_id,),
                 )
             else:
                 cur.execute(
-                    f'INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})',
+                    f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
                     (version_id,) + values,
                 )
             conn.commit()
@@ -290,29 +428,29 @@ def save_category(version_id, category, data):
 
 def get_category(version_id, category):
     """Get a category table row for a version."""
-    table = f'v_{category}'
+    table = f"v_{category}"
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(f'SELECT * FROM {table} WHERE version_id = %s', (version_id,))
+            cur.execute(f"SELECT * FROM {table} WHERE version_id = %s", (version_id,))
             return cur.fetchone() or {}
 
 
 def save_complex_table(version_id, table_name, rows):
     """Save complex value rows (logit_biases, lora_adapters, etc.)."""
     allowed = COMPLEX_TABLE_COLUMNS.get(table_name, set())
-    full_name = f'v_{table_name}'
+    full_name = f"v_{table_name}"
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(f'DELETE FROM {full_name} WHERE version_id = %s', (version_id,))
+            cur.execute(f"DELETE FROM {full_name} WHERE version_id = %s", (version_id,))
             for row in rows:
                 row = {k: v for k, v in row.items() if k in allowed}
                 if not row:
                     continue
-                cols = ', '.join(row.keys())
-                placeholders = ', '.join(['%s'] * len(row))
+                cols = ", ".join(row.keys())
+                placeholders = ", ".join(["%s"] * len(row))
                 values = tuple(row.values())
                 cur.execute(
-                    f'INSERT INTO {full_name} (version_id, {cols}) VALUES (%s, {placeholders})',
+                    f"INSERT INTO {full_name} (version_id, {cols}) VALUES (%s, {placeholders})",
                     (version_id,) + values,
                 )
             conn.commit()
@@ -320,10 +458,13 @@ def save_complex_table(version_id, table_name, rows):
 
 def get_complex_table(version_id, table_name):
     """Get complex value rows for a version."""
-    full_name = f'v_{table_name}'
+    full_name = f"v_{table_name}"
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(f'SELECT * FROM {full_name} WHERE version_id = %s ORDER BY id', (version_id,))
+            cur.execute(
+                f"SELECT * FROM {full_name} WHERE version_id = %s ORDER BY id",
+                (version_id,),
+            )
             return cur.fetchall()
 
 
@@ -337,14 +478,15 @@ def get_all_version_data(version_id):
     return result
 
 
-def save_performance_metric(version_id, load_time=None, tps=None, vram_used=None,
-                            peak_cpu=None, notes=''):
+def save_performance_metric(
+    version_id, load_time=None, tps=None, vram_used=None, peak_cpu=None, notes=""
+):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'INSERT INTO performance_metrics '
-                '(version_id, load_time_sec, tps, vram_used_mb, peak_cpu_pct, notes) '
-                'VALUES (%s, %s, %s, %s, %s, %s)',
+                "INSERT INTO performance_metrics "
+                "(version_id, load_time_sec, tps, vram_used_mb, peak_cpu_pct, notes) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
                 (version_id, load_time, tps, vram_used, peak_cpu, notes),
             )
             conn.commit()
@@ -355,8 +497,8 @@ def get_performance_metrics(version_id):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT * FROM performance_metrics WHERE version_id = %s '
-                'ORDER BY recorded_at DESC',
+                "SELECT * FROM performance_metrics WHERE version_id = %s "
+                "ORDER BY recorded_at DESC",
                 (version_id,),
             )
             return cur.fetchall()
@@ -366,7 +508,7 @@ def get_common_options():
     """Get all common options ordered by display_order."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute('SELECT * FROM common_options ORDER BY display_order')
+            cur.execute("SELECT * FROM common_options ORDER BY display_order")
             return cur.fetchall()
 
 
@@ -375,7 +517,7 @@ def is_common_option(category, column_name):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT id FROM common_options WHERE category = %s AND column_name = %s',
+                "SELECT id FROM common_options WHERE category = %s AND column_name = %s",
                 (category, column_name),
             )
             return cur.fetchone() is not None
@@ -385,14 +527,12 @@ def add_common_option(category, column_name, custom_label=None):
     """Add a field to common options. Returns True if added, False if already exists."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                'SELECT MAX(display_order) AS max_order FROM common_options'
-            )
-            max_order = cur.fetchone()['max_order'] or 0
+            cur.execute("SELECT MAX(display_order) AS max_order FROM common_options")
+            max_order = cur.fetchone()["max_order"] or 0
             try:
                 cur.execute(
-                    'INSERT INTO common_options (category, column_name, display_order, custom_label) '
-                    'VALUES (%s, %s, %s, %s)',
+                    "INSERT INTO common_options (category, column_name, display_order, custom_label) "
+                    "VALUES (%s, %s, %s, %s)",
                     (category, column_name, max_order + 1, custom_label),
                 )
                 conn.commit()
@@ -405,7 +545,7 @@ def remove_common_option(option_id):
     """Remove a common option by ID."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute('DELETE FROM common_options WHERE id = %s', (option_id,))
+            cur.execute("DELETE FROM common_options WHERE id = %s", (option_id,))
             conn.commit()
             return cur.rowcount > 0
 
@@ -416,7 +556,7 @@ def reorder_common_options(order_list):
         with conn.cursor() as cur:
             for idx, opt_id in enumerate(order_list):
                 cur.execute(
-                    'UPDATE common_options SET display_order = %s WHERE id = %s',
+                    "UPDATE common_options SET display_order = %s WHERE id = %s",
                     (idx, opt_id),
                 )
             conn.commit()
