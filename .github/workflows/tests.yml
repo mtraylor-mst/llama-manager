@@ -17,14 +17,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-          pip install pytest-cov
           pip install ruff
 
       - name: Run tests
         run: pytest tests/
-
-      - name: Code coverage
-        run: pytest --cov=llama_manager tests/
 
       - name: Lint files
         run: ruff check .

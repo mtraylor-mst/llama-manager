@@ -1,0 +1,18 @@
+[run]
+source = .
+omit =
+    run.py
+    tests/*
+    */__pycache__/*
+    .venv/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ =?= ?__main__
+show_missing = true
+precision = 2
+
+[html]
+directory = htmlcov
