@@ -1,6 +1,6 @@
 import time
 from functools import wraps
-from flask import jsonify, Response
+from flask import jsonify
 
 
 class RateLimiter:

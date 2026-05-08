@@ -1,6 +1,91 @@
 from unittest.mock import patch, MagicMock
-import os
-import tempfile
+
+
+def _mock_open_factory(contents_dict):
+    """Create a mock open that returns different content based on path."""
+    def mock_open(path, *args, **kwargs):
+        content = contents_dict.get(path, '')
+        # Split preserving newlines for readlines()
+        raw_lines = content.splitlines(keepends=True) if content else []
+        mock_file = MagicMock()
+        mock_file.read.return_value = content
+        mock_file.readlines.return_value = raw_lines
+        mock_file.__enter__ = lambda self: mock_file
+        mock_file.__exit__ = lambda self, *a: None
+        return mock_file
+    return mock_open
+
+
+class TestIsOurProcess:
+    @patch('os.getuid')
+    @patch('os.kill')
+    def test_valid_process(self, mock_kill, mock_getuid):
+        from services.screen_manager import _is_our_process
+        mock_kill.side_effect = None
+        mock_getuid.return_value = 1000
+
+        contents = {
+            '/proc/12345/status': 'Uid:\t1000\t1000\t1000\t1000\n',
+            '/proc/12345/comm': 'llama-server\n',
+        }
+        with patch('builtins.open') as mock_open:
+            mock_open.side_effect = _mock_open_factory(contents)
+            assert _is_our_process(12345) is True
+
+    @patch('os.getuid')
+    @patch('os.kill')
+    def test_wrong_uid(self, mock_kill, mock_getuid):
+        from services.screen_manager import _is_our_process
+        mock_kill.side_effect = None
+        mock_getuid.return_value = 1000
+
+        contents = {
+            '/proc/12345/status': 'Uid:\t9999\t9999\t9999\t9999\n',
+        }
+        with patch('builtins.open') as mock_open:
+            mock_open.side_effect = _mock_open_factory(contents)
+            assert _is_our_process(12345) is False
+
+    @patch('os.getuid')
+    @patch('os.kill')
+    def test_not_llama_server(self, mock_kill, mock_getuid):
+        from services.screen_manager import _is_our_process
+        mock_kill.side_effect = None
+        mock_getuid.return_value = 1000
+
+        contents = {
+            '/proc/12345/status': 'Uid:\t1000\t1000\t1000\t1000\n',
+            '/proc/12345/comm': 'bash\n',
+        }
+        with patch('builtins.open') as mock_open:
+            mock_open.side_effect = _mock_open_factory(contents)
+            assert _is_our_process(12345) is False
+
+    @patch('os.kill')
+    def test_process_not_running(self, mock_kill):
+        from services.screen_manager import _is_our_process
+        mock_kill.side_effect = ProcessLookupError()
+        assert _is_our_process(99999) is False
+
+    @patch('os.kill')
+    def test_permission_denied(self, mock_kill):
+        from services.screen_manager import _is_our_process
+        mock_kill.side_effect = PermissionError()
+        assert _is_our_process(99999) is False
+
+
+class TestExtractVersionIdFromLog:
+    def test_with_version_id(self):
+        from services.screen_manager import _extract_version_id_from_log
+        assert _extract_version_id_from_log('/tmp/llama-server-42.log') == 42
+
+    def test_without_version_id(self):
+        from services.screen_manager import _extract_version_id_from_log
+        assert _extract_version_id_from_log('/tmp/llama-server.log') is None
+
+    def test_non_numeric_suffix(self):
+        from services.screen_manager import _extract_version_id_from_log
+        assert _extract_version_id_from_log('/tmp/llama-server-abc.log') is None
 
 
 class TestGetLogFile:
@@ -52,18 +137,19 @@ class TestReadPid:
         assert pid is None
         assert vid is None
 
+    @patch('services.screen_manager._is_our_process')
     @patch('builtins.open', new_callable=MagicMock)
     @patch('os.path.exists')
-    def test_valid_pid_file(self, mock_exists, mock_open):
+    def test_valid_pid_file(self, mock_exists, mock_open, mock_is_our):
         from services.screen_manager import _read_pid
         mock_exists.return_value = True
+        mock_is_our.return_value = True
         mock_file = MagicMock()
         mock_file.read.return_value = '12345\n1\n'
         mock_open.return_value.__enter__.return_value = mock_file
-        with patch('os.kill'):
-            pid, vid = _read_pid()
-            assert pid == 12345
-            assert vid == 1
+        pid, vid = _read_pid()
+        assert pid == 12345
+        assert vid == 1
 
     @patch('builtins.open', new_callable=MagicMock)
     @patch('os.path.exists')
