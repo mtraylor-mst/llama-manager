@@ -222,7 +222,8 @@ a:hover { color: var(--primary-hover); }
 .comments { margin: 0.5rem 0; padding: 0.5rem; background: var(--bg); border-radius: 3px; font-size: 0.9rem; }
 
 /* Alerts */
-.alert { padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 3px; font-size: 0.9rem; }
+.alert { padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 3px; font-size: 0.9rem; transition: opacity 0.4s ease, max-height 0.4s ease, margin 0.4s ease; max-height: 100px; overflow: hidden; }
+.alert-dismissing { opacity: 0; max-height: 0; margin-bottom: 0; }
 .alert-success { background: #2d4a2d; color: var(--success); border: 1px solid var(--success); }
 .alert-error { background: #3d2d2d; color: var(--danger); border: 1px solid var(--danger); }
 .alert-warning { background: #3d3a2d; color: var(--warning); border: 1px solid var(--warning); }

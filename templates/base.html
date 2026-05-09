@@ -18,6 +18,16 @@
             options.headers['X-CSRFToken'] = token;
             return fetch(url, options);
         }
+        function dismissAlerts() {
+            document.querySelectorAll('#flash-area .alert:not(.alert-dismissing)').forEach(function(el) {
+                setTimeout(function() {
+                    el.classList.add('alert-dismissing');
+                    setTimeout(function() { el.remove(); }, 400);
+                }, 4000);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', dismissAlerts);
+        document.addEventListener('htmx:afterSettle', dismissAlerts);
     </script>
 </head>
 <body>
