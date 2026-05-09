@@ -9,7 +9,6 @@ from flask import (
     Response,
     stream_with_context,
 )
-import time
 import html as html_module
 from utils.rate_limit import rate_limit
 
@@ -111,49 +110,49 @@ def stream_logs():
     def generate():
         import subprocess
 
-        while True:
+        from services.screen_manager import (
+            get_log_file,
+            get_running_version_id,
+            is_running,
+        )
+
+        if not is_running():
+            yield "data: [no process running]\n\n"
+            return
+
+        vid = get_running_version_id()
+        log_file = get_log_file(vid)
+
+        proc = None
+        try:
+            proc = subprocess.Popen(
+                ["tail", "-Fn0", log_file],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
             try:
-                from services.screen_manager import (
-                    get_log_file,
-                    get_running_version_id,
-                    is_running,
-                )
-
-                if not is_running():
-                    yield "data: [no process running]\n\n"
-                    time.sleep(3)
-                    continue
-                vid = get_running_version_id()
-                log_file = get_log_file(vid)
-
-                proc = subprocess.Popen(
-                    ["tail", "-fn10", log_file],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    text=True,
-                )
+                while True:
+                    line = proc.stdout.readline()
+                    if not line:
+                        break
+                    safe = html_module.escape(line.rstrip("\n"))
+                    yield f"data: {safe}\n\n"
+            finally:
+                proc.terminate()
                 try:
-                    while True:
-                        line = proc.stdout.readline()
-                        if not line:
-                            break
-                        safe = html_module.escape(line.rstrip("\n"))
-                        yield f"data: {safe}\n\n"
-                finally:
-                    proc.terminate()
-                    try:
-                        proc.wait(timeout=3)
-                    except subprocess.TimeoutExpired:
-                        proc.kill()
-                        proc.wait()
-            except (
-                subprocess.CalledProcessError,
-                FileNotFoundError,
-                PermissionError,
-                subprocess.TimeoutExpired,
-                IOError,
-            ):
-                pass
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+            PermissionError,
+            subprocess.TimeoutExpired,
+            IOError,
+        ):
+            yield "data: [error reading logs]\n\n"
 
     return Response(
         stream_with_context(generate()),

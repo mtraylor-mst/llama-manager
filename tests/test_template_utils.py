@@ -112,19 +112,22 @@ class TestPasswordField:
     def test_password_field_with_value(self):
         html = render_field("server", "api_key", "mysecret123")
         assert 'type="password"' in html
-        assert 'value="mysecret123"' in html
+        assert 'type="hidden"' in html
+        # Secret is only in hidden field, not visible password input
+        assert 'name="server_api_key" value="mysecret123">' in html
+        assert 'name="__server_api_key" value=""' in html
         assert 'placeholder="••••••"' in html
 
     def test_password_field_empty(self):
         html = render_field("server", "api_key", "")
         assert 'type="password"' in html
-        assert 'value=""' in html
-        assert 'placeholder=""' in html
+        assert 'type="hidden"' in html
+        assert "placeholder=" not in html
 
     def test_password_field_none(self):
         html = render_field("server", "api_key", None)
         assert 'type="password"' in html
-        assert 'value=""' in html
+        assert 'type="hidden"' in html
 
 
 class TestBoolWithPythonTrue:

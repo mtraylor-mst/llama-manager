@@ -144,12 +144,19 @@ class TestBenchmark:
 
 
 class TestStreamLogs:
-    def test_stream_logs_response_headers(self, client):
+    @patch("services.screen_manager.is_running", return_value=False)
+    def test_stream_logs_response_headers(self, mock_running, client):
         resp = client.get("/server/stream-logs")
         assert resp.status_code == 200
         assert "text/event-stream" in resp.content_type
         assert resp.headers.get("Cache-Control") == "no-cache"
         assert resp.headers.get("X-Accel-Buffering") == "no"
+
+    @patch("services.screen_manager.is_running", return_value=False)
+    def test_stream_logs_no_process(self, mock_running, client):
+        resp = client.get("/server/stream-logs")
+        assert resp.status_code == 200
+        assert b"[no process running]" in resp.data
 
 
 class TestImportConfig:
