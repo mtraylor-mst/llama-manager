@@ -6,6 +6,16 @@ This guide covers the technical details for fine-tuning model performance and in
 
 The following parameters are used to configure `llama-server`. They are organized by functional category. Each parameter lists its CLI flag(s), default value, and a brief description.
 
+**Tristate Parameters**: Some parameters support three states instead of a simple on/off:
+
+| State | Effect |
+|---|---|
+| **(default)** | Omit the flag entirely — llama.cpp uses its built-in default |
+| **Enable** | Explicitly add the flag to enable the feature |
+| **Disable** | Add the `--no-` variant to explicitly disable the feature |
+
+Parameters with tristate support are marked with `default: on` or `default: off` in the Default column, indicating what llama.cpp's behavior is when the flag is left unset.
+
 ### Model Loading
 
 Configure which model to load and how to load it.
@@ -21,8 +31,8 @@ Configure which model to load and how to load it.
 | Vocoder Model | `--model-vocoder` | — | Audio vocoder model for speech-enabled models. |
 | MMProj Path | `--mmproj`, `-mm` | — | Path to multi-modal projection weights for vision models. |
 | MMProj URL | `--mmproj-url`, `-mmu` | — | Remote URL to download mmproj weights from. |
-| Auto MMProj | `--mmproj-auto` | off | Automatically search for and load a matching mmproj file. |
-| Offload MMProj | `--mmproj-offload` | off | Offload the mmproj layer to GPU memory. |
+| Auto MMProj | `--mmproj-auto` | default: off | Automatically search for and load a matching mmproj file. (Tristate) |
+| Offload MMProj | `--mmproj-offload` | default: off | Offload the mmproj layer to GPU memory. (Tristate) |
 | Aliases | `-a`, `--alias` | — | Comma-separated display names for the model in the API. |
 | Tags | `--tags` | — | Comma-separated tags for model metadata and filtering. |
 
@@ -38,13 +48,13 @@ Control how computation is distributed across GPUs and CPU.
 | Tensor Split | `-ts`, `--tensor-split` | — | Ratio of tensor weights per GPU (e.g., `3,1` for 75%/25% split). |
 | Main GPU | `-mg`, `--main-gpu` | 0 | Primary GPU index for non-parallel work. |
 | Flash Attention | `-fa`, `--flash-attn` | auto | Enable flash attention (`on`/`off`/`auto`) for faster processing and lower memory on long contexts. |
-| KV Offload | `--kv-offload`, `-kvo` | off | Move the Key-Value cache to GPU to reduce system RAM pressure. |
-| Weight Repack | `--repack`, `-nr` | off | Repack model weights for more efficient GPU memory usage. |
+| KV Offload | `--kv-offload`, `-kvo` | default: off | Move the Key-Value cache to GPU to reduce system RAM pressure. (Tristate) |
+| Weight Repack | `--repack`, `-nr` | default: off | Repack model weights for more efficient GPU memory usage. (Tristate) |
 | No Host Memory | `--no-host` | off | Disable host (CPU) memory allocation entirely. Use when VRAM is sufficient. |
 | Auto Fit | `--fit` | off | Automatically determine optimal layer offloading based on available VRAM (`on`/`off`). |
 | Fit Target | `-fitt`, `--fit-target` | — | Per-device VRAM margin in MiB to reserve when auto-fitting. |
 | Fit Min Context | `-fitc`, `--fit-ctx` | 4096 | Minimum context size to assume when auto-fitting. |
-| Op Offload | `--op-offload` | off | Offload additional operations (norms, embeddings) to GPU. |
+| Op Offload | `--op-offload` | default: off | Offload additional operations (norms, embeddings) to GPU. (Tristate) |
 | CPU MoE | `--cpu-moe`, `-cmoe` | off | Run Mixture-of-Experts layers on CPU instead of GPU. |
 | N CPU MoE | `-ncmoe`, `--n-cpu-moe` | — | Number of expert layers to run on CPU. |
 | CPU MoE Draft | `--cpu-moe-draft`, `-cmoed` | off | Run draft model's MoE layers on CPU. |
@@ -97,14 +107,14 @@ Control context window size, token processing, and request handling.
 | U-Batch Size | `-ub`, `--ubatch-size` | 512 | Internal micro-batch size for computation. Affects memory vs speed tradeoff. |
 | Keep Tokens | `--keep` | 0 | Number of initial tokens to preserve during context shifting. `-1` = keep all. |
 | Parallel Slots | `-np`, `--parallel` | 1 | Number of concurrent request slots. `-1` = auto-detect. |
-| Continuous Batching | `--cont-batching`, `-cb` | off | Enable continuous (iterative) batching for better throughput under load. |
+| Continuous Batching | `--cont-batching`, `-cb` | default: off | Enable continuous (iterative) batching for better throughput under load. (Tristate) |
 | Context Shift | `--context-shift` | off | Allow context shifting when the window is full (drops oldest tokens). |
 | Reverse Prompt | `-r`, `--reverse-prompt` | — | Stop generation when this prompt pattern appears in output. |
 | Special Tokens | `--special` | off | Process special/control tokens during generation instead of treating them as text. |
 | Warmup | `--warmup` | off | Run a warmup pass on model loading to pre-compile compute graphs. |
 | SPM Infill | `--spm-infill` | off | Enable SentencePiece infill mode for edit/completion tasks. |
 | Pooling | `--pooling` | — | Pooling strategy for embedding models (e.g., `none`, `mean`, `cls`). |
-| Cache Prompts | `--cache-prompt` | on | Cache processed prompts in the KV cache for reuse across requests. |
+| Cache Prompts | `--cache-prompt` | default: on | Cache processed prompts in the KV cache for reuse across requests. (Tristate) |
 | Cache Reuse Min | `--cache-reuse` | 0 | Minimum prefix match length to reuse cached context. `0` = disabled. |
 | Slot Prompt Similarity | `-sps`, `--slot-prompt-similarity` | 0.0 | Prefix similarity threshold for slot cache matching. `0.0` = disabled. |
 
@@ -140,9 +150,9 @@ Manage memory allocation, caching strategy, and disk I/O behavior.
 | KV Cache Type V | `-ctv`, `--cache-type-v` | f16 | Data type for Value cache: same options as Key cache. |
 | KV Cache K (Draft) | `-ctkd`, `--cache-type-k-draft` | — | Key cache type for draft model in speculative decoding. |
 | KV Cache V (Draft) | `-ctvd`, `--cache-type-v-draft` | — | Value cache type for draft model. |
-| Memory Map | `--mmap` | on | Use memory-mapped I/O for loading model weights. Faster startup, lower RAM overhead. |
+| Memory Map | `--mmap` | default: on | Use memory-mapped I/O for loading model weights. Faster startup, lower RAM overhead. (Tristate) |
 | Lock Memory | `--mlock` | off | Lock model in RAM to prevent swapping. Ensures consistent performance. |
-| Direct I/O | `--direct-io`, `-dio` | off | Bypass OS page cache for model loading. Useful with large models on high-RAM systems. |
+| Direct I/O | `--direct-io`, `-dio` | default: off | Bypass OS page cache for model loading. Useful with large models on high-RAM systems. (Tristate) |
 | Defrag Threshold | `-dt`, `--defrag-thold` | — | KV cache defragmentation threshold. Reclaims fragmented memory slots. |
 | SWA Full | `--swa-full` | off | Enable full Sliding Window Attention mode for models that support it. |
 
@@ -162,12 +172,12 @@ HTTP server configuration, security, and API behavior.
 | API Key | `--api-key` | — | Bearer token required for all API requests. |
 | SSL Key File | `--ssl-key-file` | — | Path to private key file for HTTPS. |
 | SSL Cert File | `--ssl-cert-file` | — | Path to certificate file for HTTPS. |
-| Web UI | `--webui` | on | Enable the built-in web interface. Use `--no-webui` to disable. |
+| Web UI | `--webui` | default: on | Enable the built-in web interface. (Tristate) |
 | Embeddings | `--embedding`, `--embeddings` | off | Run in embeddings-only mode (disables chat/completion endpoints). |
 | Reranking | `--rerank`, `--reranking` | off | Enable reranking endpoint for search/retrieval use cases. |
 | Metrics | `--metrics` | off | Expose Prometheus-compatible metrics at `/metrics`. |
 | Props | `--props` | off | Enable model properties endpoint. |
-| Slots Endpoint | `--slots` | on | Enable the `/slots` API endpoint for slot management. |
+| Slots Endpoint | `--slots` | default: on | Enable the `/slots` API endpoint for slot management. (Tristate) |
 | Slot Save Path | `--slot-save-path` | — | Directory to persist slot state between restarts. |
 | Media Path | `--media-path` | — | Directory for serving media files in multimodal requests. |
 | LoRA Init Only | `--lora-init-without-apply` | off | Load LoRA adapters without applying them (apply later via API). |
@@ -200,13 +210,13 @@ Control chat formatting, reasoning behavior, and template handling.
 | Chat Template | `--chat-template` | auto | Built-in template: `auto`, `chatml`, `llama3`, `mistral-v3`, `deepseek`, `gemma`, `phi3`. |
 | Chat Template File | `--chat-template-file` | — | Path to a custom Jinja2 chat template file. |
 | Chat Template Kwargs | `--chat-template-kwargs` | — | JSON string of extra variables for the template (e.g., `{"preserve_thinking":true}`). |
-| Use Jinja | `--jinja` | off | Force use of Jinja2 templating instead of built-in templates. |
+| Use Jinja | `--jinja` | default: off | Force use of Jinja2 templating instead of built-in templates. (Tristate) |
 | Reasoning Format | `--reasoning-format` | auto | Output format for reasoning models: `auto`, `none`, `deepseek`. |
 | Reasoning | `-rea`, `--reasoning` | auto | Enable/disable reasoning output: `auto`, `on`, `off`. |
 | Reasoning Budget | `--reasoning-budget` | -1 | Maximum tokens allocated for reasoning. `-1` = unrestricted. |
 | Reasoning Budget Msg | `--reasoning-budget-message` | — | Custom message appended when the reasoning budget is exceeded. |
-| Skip Chat Parsing | `--skip-chat-parsing` | off | Bypass chat template parsing and send raw content to the model. |
-| Prefill Assistant | `--prefill-assistant` | off | Prefill the assistant role token to steer generation start. |
+| Skip Chat Parsing | `--skip-chat-parsing` | default: off | Bypass chat template parsing and send raw content to the model. (Tristate) |
+| Prefill Assistant | `--prefill-assistant` | default: off | Prefill the assistant role token to steer generation start. (Tristate) |
 
 ### Checkpoints & Cache
 
@@ -217,8 +227,8 @@ Manage context checkpointing, RAM caching, and lookup strategies.
 | Context Checkpoints | `-ctxcp`, `--ctx-checkpoints` | 32 | Number of context checkpoints to maintain for fast recovery. |
 | Checkpoint Every N | `-cpent`, `--checkpoint-every-n-tokens` | — | Create a checkpoint every N generated tokens. |
 | Cache RAM | `-cram`, `--cache-ram` | -1 | Maximum RAM (MiB) allocated for the KV cache. `-1` = no limit. |
-| Unified KV Buffer | `--kv-unified`, `-kvu` | off | Use a single unified buffer for all KV caches instead of per-slot allocation. |
-| Cache Idle Slots | `--cache-idle-slots` | off | Preserve cached context in idle (inactive) slots. |
+| Unified KV Buffer | `--kv-unified`, `-kvu` | default: off | Use a single unified buffer for all KV caches instead of per-slot allocation. (Tristate) |
+| Cache Idle Slots | `--cache-idle-slots` | default: off | Preserve cached context in idle (inactive) slots. (Tristate) |
 | Lookup Cache Static | `-lcs`, `--lookup-cache-static` | — | Static lookup cache size for prefix matching. |
 | Lookup Cache Dynamic | `-lcd`, `--lookup-cache-dynamic` | — | Dynamic lookup cache size that scales with usage. |
 
