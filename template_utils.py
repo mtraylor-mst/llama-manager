@@ -349,10 +349,11 @@ def render_field(category, col, value):
         return html
 
     elif ftype == "password":
-        val_display = "••••••" if value else ""
+        escaped_value = hescape(str(value) if value else "", quote=True)
+        placeholder = 'placeholder="••••••"' if value else ""
         return (
-            f'<input type="password" name="{name}" value="{value or ""}" '
-            f'placeholder="{val_display if val_display else ""}">'
+            f'<input type="hidden" name="{name}" value="{escaped_value}">'
+            f'<input type="password" name="__{name}" value="" {placeholder}>'
         )
 
     else:

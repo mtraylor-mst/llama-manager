@@ -208,6 +208,10 @@ def _save_version_data(version_id, config_id, form_data=None):
         for key, val in form.items():
             if key.startswith(prefix):
                 col = key[len(prefix) :]
+                edit_col = col + "_edit"
+                is_password_edit = key.endswith("_edit") and val
+                if is_password_edit:
+                    col = edit_col[:-5]
                 if val == "" or val == "None":
                     data[col] = None
                 elif col in _TRISTATE_COLS.get(cat, set()):
