@@ -108,7 +108,9 @@ def stream_logs():
     """SSE endpoint that streams stdout from the running llama-server process."""
 
     def generate():
+        import queue
         import subprocess
+        import threading
 
         from services.screen_manager import (
             get_log_file,
@@ -123,36 +125,46 @@ def stream_logs():
         vid = get_running_version_id()
         log_file = get_log_file(vid)
 
-        proc = None
-        try:
-            proc = subprocess.Popen(
-                ["tail", "-Fn0", log_file],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
+        q = queue.Queue()
+
+        def reader():
+            proc = None
             try:
-                while True:
-                    line = proc.stdout.readline()
-                    if not line:
+                proc = subprocess.Popen(
+                    ["stdbuf", "-oL", "tail", "-fn10", log_file],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                )
+                for line in proc.stdout:
+                    q.put(line)
+            except Exception:
+                pass
+            finally:
+                if proc:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=3)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
+                q.put(None)
+
+        t = threading.Thread(target=reader, daemon=True)
+        t.start()
+
+        try:
+            while True:
+                try:
+                    line = q.get(timeout=15)
+                    if line is None:
                         break
                     safe = html_module.escape(line.rstrip("\n"))
                     yield f"data: {safe}\n\n"
-            finally:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait()
-        except (
-            subprocess.CalledProcessError,
-            FileNotFoundError,
-            PermissionError,
-            subprocess.TimeoutExpired,
-            IOError,
-        ):
-            yield "data: [error reading logs]\n\n"
+                except queue.Empty:
+                    yield ": heartbeat\n\n"
+        except GeneratorExit:
+            pass
 
     return Response(
         stream_with_context(generate()),
