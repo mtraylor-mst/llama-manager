@@ -35,7 +35,7 @@ For detailed prerequisites, virtual environment setup, and database initializati
 | `LLAMA_DB_USER` | `username` | Database user |
 | `LLAMA_DB_PASS` | `password` | Database password |
 | `LLAMA_DB_NAME` | `llama_configs` | Database name |
-| `LLAMA_MODEL_DIR` | `/home/mtraylor/.cache/huggingface/hub/` | Default model directory |
+| `LLAMA_MODEL_DIR` | `~/.cache/huggingface/hub/` | Default model directory |
 | `LLAMA_SERVER_BINARY` | `/usr/local/bin/llama-server` | Path to llama.cpp server binary |
 | `LLAMA_SECRET_KEY` | *(random)* | Flask secret key for sessions |
 | `AUTH_ENABLED` | `false` | Enable HTTP Basic Auth |
