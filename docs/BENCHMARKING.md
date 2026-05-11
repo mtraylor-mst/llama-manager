@@ -90,7 +90,8 @@ The HTTP request has a **120-second timeout**. If the server does not respond wi
 
 **Primary speed metric.** How many tokens the model generates per second during the completion request.
 
-- **Server-reported**: If llama-server returns timing data in its response (`timing.generation_ms`), TPS is calculated as `1000 / ms_per_token`. This is the most accurate value.
+- **Server-reported (primary)**: If llama-server returns `timing.predicted_per_second` in its response, this value is used directly. This is the most accurate value.
+- **Server-reported (fallback)**: If `predicted_per_second` is unavailable but `timing.predicted_ms` and `timing.predicted_n` are present, TPS is calculated as `tokens_generated * 1000 / predicted_ms`.
 - **Estimated fallback**: If server timing data is unavailable, TPS is estimated as `tokens_generated / duration_sec`.
 
 **Interpretation**: Higher is faster. A typical GPU-offloaded 7B model might achieve 30-80 TPS depending on hardware. CPU-only inference may be 5-20 TPS.

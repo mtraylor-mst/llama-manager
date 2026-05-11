@@ -31,10 +31,10 @@ cd llama-manager
 ```
 
 ### 2. Install Dependencies
-It is recommended to use a virtual environment:
+It is recommended to use a virtual environment (created via `uv`):
 ```bash
 # Create and activate a virtual environment
-python3 -m venv .venv
+uv venv --python 3.10 --seed
 source .venv/bin/activate  # On macOS/Linux
 
 # Install required Python packages

@@ -13,6 +13,9 @@ Track, compare, and launch [llama.cpp](https://github.com/ggerganov/llama.cpp) s
 - **Command preview** — generates and displays the full command line with secret redaction
 - **Benchmarking** — run TPS benchmarks, track VRAM/CPU usage, and compare performance per version
 - **Common options** — pin frequently-used fields to a compact quick-edit panel
+- **Command diff** — compare two versions and see exactly which flags were added, removed, or changed
+- **Benchmark comparison** — view benchmarks across all versions of a config, or compare multiple configs side-by-side
+- **Version management** — fork, duplicate, and delete versions to iterate safely
 - **HTTP Basic Auth** — optional authentication layer for protected deployments
 
 ## Setup
@@ -39,8 +42,8 @@ For detailed prerequisites, virtual environment setup, and database initializati
 | `LLAMA_SERVER_BINARY` | `/usr/local/bin/llama-server` | Path to llama.cpp server binary |
 | `LLAMA_SECRET_KEY` | *(random)* | Flask secret key for sessions |
 | `AUTH_ENABLED` | `false` | Enable HTTP Basic Auth |
-| `AUTH_USER` | `username` | Auth username |
-| `AUTH_PASSWORD` | `password` | Auth password |
+| `AUTH_USER` | *(empty)* | Auth username |
+| `AUTH_PASSWORD` | *(empty)* | Auth password |
 | `DEBUG` | `false` | Flask debug mode |
 
 ## Usage

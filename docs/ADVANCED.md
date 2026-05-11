@@ -470,24 +470,79 @@ Captures the current running server's command-line flags and imports them as a n
 #### Common Options
 `GET /common-options`
 
-Returns the list of pinned common option presets for quick configuration.
+Returns the HTML page for managing common options (pinned fields shown on every version edit form).
+
+`POST /common-options/toggle`
+
+Add or remove a field from common options. Accepts JSON with `category`, `column_name`, and `add` (boolean).
+
+`POST /common-options/reorder`
+
+Reorder common options via drag-and-drop. Accepts JSON with `order` (list of option IDs).
+
+`POST /common-options/remove/<int:option_id>`
+
+Remove a common option preset.
+
+`POST /common-options/update-label/<int:option_id>`
+
+Rename a common option preset. Accepts form data with `custom_label`.
+
+#### Command Diff
+`GET /api/benchmarks/diff`
+
+Compares the generated command lines between two versions. Returns flags that were added, removed, or changed.
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `v1` | `integer` | First version ID to compare |
+| `v2` | `integer` | Second version ID to compare |
 
 **Response Example:**
 ```json
-[
-  {
-    "id": 1,
-    "label": "Fast Chat",
-    "order": 0,
-    "config": { "temperature": 0.7, "top_p": 0.9, ... }
-  }
-]
+{
+  "version_1": { "id": 5, "version_number": 2, "config_name": "My Config" },
+  "version_2": { "id": 7, "version_number": 3, "config_name": "My Config" },
+  "added": [{ "flag": "--flash-attn", "value": null }],
+  "removed": [{ "flag": "--no-mmap", "value": null }],
+  "changed": [{ "flag": "-ngl", "old_value": "20", "new_value": "35" }],
+  "command_1": "llama-server -m /path/to/model.gguf -ngl 20 --no-mmap",
+  "command_2": "llama-server -m /path/to/model.gguf -ngl 35 --flash-attn"
+}
 ```
 
-`POST /common-options/toggle` — Enable/disable a common option preset.
-`POST /common-options/reorder` — Reorder the pinned options list.
-`POST /common-options/remove/<int:option_id>` — Remove a common option preset.
-`POST /common-options/update-label/<int:option_id>` — Rename a common option preset.
+#### Command Preview
+`GET /version/<int:version_id>/command`
+
+Returns the full command line for a version with secrets redacted.
+
+**Response Example:**
+```json
+{
+  "command": "llama-server -m /path/to/model.gguf -ngl 35 --host 0.0.0.0 --port 8080"
+}
+```
+
+#### Config Benchmarks
+`GET /config/<int:config_id>/benchmarks`
+
+Returns the benchmark history page for all versions of a config.
+
+#### Benchmark Comparison
+`GET /benchmarks/compare`
+
+Returns the cross-config benchmark comparison page. Optionally filter by one or more `config_id` query parameters.
+
+#### Version Deletion
+`POST /version/<int:version_id>/delete`
+
+Deletes a version and all its associated data. Cannot delete the currently running version.
+
+#### Version Duplication
+`POST /version/<int:version_id>/duplicate`
+
+Creates an exact copy of a version. Redirects to the edit form for the new version.
 
 ---
 
