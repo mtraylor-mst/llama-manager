@@ -34,6 +34,7 @@
     <nav class="topnav">
         <a href="{{ url_for('index') }}" class="brand">llama.cpp Manager</a>
         <a href="{{ url_for('common.index') }}" class="nav-link">Common Options</a>
+        <a href="{{ url_for('configs.compare_benchmarks') }}" class="nav-link">Compare Benchmarks</a>
         <div class="nav-right">
             {% if server_status.running %}
             <span class="status running" hx-get="{{ url_for('server.status') }}" hx-trigger="every 10s" hx-swap="outerHTML">

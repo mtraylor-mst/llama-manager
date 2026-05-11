@@ -57,7 +57,8 @@ def rate_limit(key_func=None, max_calls=1, period=60):
                 msg = f"Too frequent. Try again in {retry_after:.0f}s."
                 if is_htmx:
                     return f'<div class="alert alert-warning">{msg}</div>', 429
-                if (request.accept_mimetypes.best or "").startswith("application/json"):
+                best = request.accept_mimetypes.best or ""
+                if best.startswith("application/json") or best == "*/*":
                     return jsonify({"error": msg}), 429
                 from flask import flash, redirect, url_for
 

@@ -375,3 +375,164 @@ a:hover { color: var(--primary-hover); }
 .sortable-drag {
     opacity: 0.8;
 }
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+.modal-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+.modal-header h3 {
+    margin: 0;
+}
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close:hover {
+    color: var(--text);
+}
+.modal-body {
+    padding: 1.5rem;
+}
+
+/* Diff selectors */
+.diff-selectors {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+.diff-selectors .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+.diff-selectors select {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+.diff-selectors select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Diff results */
+.diff-results {
+    margin-top: 1rem;
+}
+.diff-versions {
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+.diff-versions strong {
+    margin: 0 0.5rem;
+    color: var(--text-dim);
+}
+.diff-section {
+    margin-bottom: 1rem;
+}
+.diff-section h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.3rem;
+}
+.diff-section ul {
+    list-style: none;
+    padding: 0;
+}
+.diff-section li {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    border-radius: 2px;
+    margin-bottom: 0.15rem;
+}
+.diff-added li {
+    background: rgba(106, 153, 85, 0.1);
+    color: var(--success);
+}
+.diff-removed li {
+    background: rgba(198, 120, 221, 0.1);
+    color: var(--danger);
+}
+.diff-changed li {
+    background: rgba(229, 192, 123, 0.1);
+    color: var(--warning);
+}
+.diff-old {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+.diff-new {
+    font-weight: bold;
+}
+.diff-full-cmd {
+    margin-top: 1rem;
+}
+.diff-full-cmd summary {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 0.3rem 0;
+}
+.diff-full-cmd .command-box {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.version-group-start td:first-child {
+    font-weight: bold;
+}
+
+/* Compare benchmarks page */
+.compare-selectors select[multiple] {
+    width: 100%;
+    max-width: 400px;
+    padding: 0.4rem 0.6rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+}

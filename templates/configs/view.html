@@ -46,6 +46,7 @@
             {% endif %}
         </form>
         <button class="btn" onclick="runBenchmark({{ featured.id }}, this)">Run Benchmark</button>
+        <a href="{{ url_for('configs.benchmarks', config_id=config.id) }}" class="btn">View All Benchmarks</a>
         <a href="{{ url_for('versions.history', config_id=config.id) }}" class="btn">View History</a>
     </div>
 </div>
@@ -177,8 +178,15 @@ async function runBenchmark(versionId, btn) {
         const resp = await csrfSafeFetch(`/version/${versionId}/benchmark`, {
             method: 'POST',
         });
-        const data = await resp.json();
-
+        const data = await resp.json().catch(() => null);
+        if (!data) {
+            status.innerHTML = '<div class="alert alert-error">Benchmark failed: invalid server response</div>';
+            return;
+        }
+        if (!data.success && data.error) {
+            status.innerHTML = `<div class="alert alert-error">Benchmark failed: ${data.error}</div>`;
+            return;
+        }
         if (data.success) {
             status.innerHTML = `<div class="alert alert-success">
                 Benchmark complete: <strong>${data.tps} TPS</strong>,

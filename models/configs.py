@@ -504,6 +504,45 @@ def get_performance_metrics(version_id):
             return cur.fetchall()
 
 
+def get_all_config_benchmarks(config_id):
+    """Get all benchmark metrics for all versions of a config, ordered by version."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT pm.*, cv.id as version_id, cv.version_number, cv.comments as version_comments, "
+                "cv.created_at as version_created_at, cv.status as version_status, "
+                "c.id as config_id, c.name as config_name "
+                "FROM performance_metrics pm "
+                "JOIN config_versions cv ON cv.id = pm.version_id "
+                "JOIN configs c ON c.id = cv.config_id "
+                "WHERE c.id = %s "
+                "ORDER BY cv.version_number ASC, pm.recorded_at DESC",
+                (config_id,),
+            )
+            return cur.fetchall()
+
+
+def get_all_model_benchmarks(config_ids):
+    """Get all benchmark metrics for multiple configs, for cross-model comparison."""
+    if not config_ids:
+        return []
+    placeholders = ", ".join(["%s"] * len(config_ids))
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"SELECT pm.*, cv.id as version_id, cv.version_number, cv.comments as version_comments, "
+                f"cv.created_at as version_created_at, cv.status as version_status, "
+                f"c.id as config_id, c.name as config_name "
+                f"FROM performance_metrics pm "
+                f"JOIN config_versions cv ON cv.id = pm.version_id "
+                f"JOIN configs c ON c.id = cv.config_id "
+                f"WHERE c.id IN ({placeholders}) "
+                f"ORDER BY c.name ASC, cv.version_number ASC, pm.recorded_at DESC",
+                config_ids,
+            )
+            return cur.fetchall()
+
+
 def get_common_options():
     """Get all common options ordered by display_order."""
     with get_conn() as conn:
