@@ -239,3 +239,91 @@ class TestBenchmarkVersion:
         assert result["error"] == "Connection failed"
         assert result["vram_used_mb"] is None
         mock_save.assert_called_once()
+
+
+class TestRunBenchmarkServerTps:
+    @patch("services.benchmarks.urllib.request.urlopen")
+    def test_server_provided_tps(self, mock_urlopen):
+        """When server returns predicted_per_second, use it directly."""
+        from services.benchmarks import run_benchmark
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(
+            {"timing": {"predicted_n": 128, "predicted_per_second": 45.5}}
+        ).encode()
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        result = run_benchmark("127.0.0.1", 8080)
+        assert result["error"] is None
+        assert result["tps"] == 45.5
+        assert result["tokens_generated"] == 128
+
+    @patch("services.benchmarks.urllib.request.urlopen")
+    def test_fallback_predicted_ms(self, mock_urlopen):
+        """When no predicted_per_second but predicted_ms exists, calculate TPS."""
+        from services.benchmarks import run_benchmark
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(
+            {"timing": {"predicted_n": 100, "predicted_ms": 2000}}
+        ).encode()
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        result = run_benchmark("127.0.0.1", 8080)
+        assert result["error"] is None
+        assert result["tps"] == 50.0
+        assert result["tokens_generated"] == 100
+
+    @patch("services.benchmarks.urllib.request.urlopen")
+    def test_json_decode_error(self, mock_urlopen):
+        """When response is not valid JSON, return generic error."""
+        from services.benchmarks import run_benchmark
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b"not valid json{"
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        result = run_benchmark("127.0.0.1", 8080)
+        assert result["tps"] == 0
+        assert result["error"] == "Benchmark failed unexpectedly"
+
+
+class TestGetServerHostPortEdgeCases:
+    def test_empty_server_dict(self):
+        from services.benchmarks import get_server_host_port
+
+        data = {"server": {}}
+        host, port = get_server_host_port(data)
+        assert host == "127.0.0.1"
+        assert port == 8080
+
+    def test_none_server_values(self):
+        from services.benchmarks import get_server_host_port
+
+        data = {"server": {"host": None, "port": None}}
+        host, port = get_server_host_port(data)
+        assert host == "127.0.0.1"
+        assert port == 8080
+
+
+class TestWaitForServerEdgeCases:
+    @patch("services.benchmarks.urllib.request.urlopen")
+    @patch("time.sleep")
+    def test_json_decode_error(self, mock_sleep, mock_urlopen):
+        """When health endpoint returns invalid JSON, keep retrying."""
+        from services.benchmarks import wait_for_server
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b"not json"
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        ready, elapsed = wait_for_server("127.0.0.1", 8080, timeout=2)
+        assert ready is False
+
+    @patch("services.benchmarks.urllib.request.urlopen")
+    @patch("time.sleep")
+    def test_status_not_ok(self, mock_sleep, mock_urlopen):
+        """When health endpoint returns status other than 'ok', keep retrying."""
+        from services.benchmarks import wait_for_server
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"status": "loading"}).encode()
+        mock_urlopen.return_value.__enter__.return_value = mock_resp
+        ready, elapsed = wait_for_server("127.0.0.1", 8080, timeout=2)
+        assert ready is False

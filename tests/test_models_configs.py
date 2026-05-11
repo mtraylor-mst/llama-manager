@@ -21,6 +21,8 @@ from models.configs import (
     get_all_version_data,
     save_performance_metric,
     get_performance_metrics,
+    get_all_config_benchmarks,
+    get_all_model_benchmarks,
     get_common_options,
     is_common_option,
     add_common_option,
@@ -640,3 +642,102 @@ class TestReorderCommonOptions:
         reorder_common_options([])
         cur = _get_cur(mock_get_conn)
         assert len(cur.executed_sql) == 0
+
+
+# -- Benchmark queries --
+
+
+class TestGetAllConfigBenchmarks:
+    @patch("models.configs.get_conn")
+    def test_returns_benchmarks_for_config(self, mock_get_conn):
+        _setup_mock(
+            mock_get_conn,
+            queue=[
+                [
+                    {
+                        "id": 1,
+                        "tps": 30.0,
+                        "version_id": 10,
+                        "version_number": 1,
+                        "config_id": 1,
+                        "config_name": "Alpha",
+                    },
+                    {
+                        "id": 2,
+                        "tps": 35.0,
+                        "version_id": 11,
+                        "version_number": 2,
+                        "config_id": 1,
+                        "config_name": "Alpha",
+                    },
+                ]
+            ],
+        )
+        result = get_all_config_benchmarks(1)
+        assert len(result) == 2
+        assert result[0]["version_number"] == 1
+        assert result[1]["version_number"] == 2
+
+    @patch("models.configs.get_conn")
+    def test_returns_empty_when_no_benchmarks(self, mock_get_conn):
+        _setup_mock(mock_get_conn, queue=[[]])
+        result = get_all_config_benchmarks(999)
+        assert result == []
+
+    @patch("models.configs.get_conn")
+    def test_uses_correct_config_id(self, mock_get_conn):
+        _setup_mock(mock_get_conn, queue=[[]])
+        get_all_config_benchmarks(42)
+        cur = _get_cur(mock_get_conn)
+        assert cur.executed_params[0] == (42,)
+
+
+class TestGetAllModelBenchmarks:
+    @patch("models.configs.get_conn")
+    def test_returns_benchmarks_for_multiple_configs(self, mock_get_conn):
+        _setup_mock(
+            mock_get_conn,
+            queue=[
+                [
+                    {
+                        "id": 1,
+                        "tps": 30.0,
+                        "version_id": 10,
+                        "version_number": 1,
+                        "config_id": 1,
+                        "config_name": "Alpha",
+                    },
+                    {
+                        "id": 2,
+                        "tps": 50.0,
+                        "version_id": 20,
+                        "version_number": 1,
+                        "config_id": 2,
+                        "config_name": "Beta",
+                    },
+                ]
+            ],
+        )
+        result = get_all_model_benchmarks([1, 2])
+        assert len(result) == 2
+        config_ids = [r["config_id"] for r in result]
+        assert 1 in config_ids
+        assert 2 in config_ids
+
+    @patch("models.configs.get_conn")
+    def test_returns_empty_for_empty_list(self, mock_get_conn):
+        result = get_all_model_benchmarks([])
+        assert result == []
+
+    @patch("models.configs.get_conn")
+    def test_returns_empty_for_none(self, mock_get_conn):
+        result = get_all_model_benchmarks(None)
+        assert result == []
+
+    @patch("models.configs.get_conn")
+    def test_uses_correct_placeholders(self, mock_get_conn):
+        _setup_mock(mock_get_conn, queue=[[]])
+        get_all_model_benchmarks([1, 2, 3])
+        cur = _get_cur(mock_get_conn)
+        assert list(cur.executed_params[0]) == [1, 2, 3]
+        assert "IN (%s, %s, %s)" in cur.executed_sql[0]
