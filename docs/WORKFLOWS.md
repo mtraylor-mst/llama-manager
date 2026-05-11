@@ -30,6 +30,7 @@ There are three main ways to change your settings:
 *   **Edit Latest**: Quickly adjust the parameters of the most recent version.
 *   **Forking (Creating a New Version)**: If you want to try a new idea (e.g., "What if I increase the context size?") without losing your current setup, use the **Fork** option. This creates a new version based on the existing one.
 *   **Duplicating**: Create an exact copy of a version to serve as a starting point for a new experiment.
+*   **Deleting**: Remove a version that is no longer needed. You cannot delete the currently running version — stop it first.
 
 ### Parameter Organization
 Settings are organized into logical categories to make tuning easier:
@@ -58,3 +59,15 @@ To evaluate how a change affects performance:
 1.  Select a version.
 2.  Run the **Benchmark** command.
 3.  The system will track metrics such as **Tokens Per Second (TPS)**, VRAM usage (MB), peak CPU %, and request duration, which are then stored in the version's history for comparison.
+
+### Benchmark Comparison
+
+View benchmarks across all versions of a single config from the config's benchmark page, or compare multiple configs side-by-side using the cross-config benchmark comparison view.
+
+### Command Diff
+
+To see exactly how two versions differ, use the command diff feature. It compares the generated command lines between two versions and shows which flags were added, removed, or changed. Accessible via the API at `/api/benchmarks/diff?v1=<id>&v2=<id>`.
+
+### Common Options
+
+Frequently-used parameters can be pinned to a **common options** panel that appears at the top of every version edit form. Toggle fields in and out of common options, reorder them via drag-and-drop, and customize their display labels.
