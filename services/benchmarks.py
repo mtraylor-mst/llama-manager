@@ -77,11 +77,19 @@ def run_benchmark(host, port, prompt=TEST_PROMPT, n_tokens=TEST_N_TOKENS):
             if "timing" in data:
                 timing = data["timing"]
                 tokens_generated = timing.get("predicted_n", n_tokens)
-                # If server reports generation tps directly, use it
-                gen_tps = timing.get("generation_ms", 0)
-                if gen_tps and tokens_generated:
-                    # generation_ms is ms per token
-                    server_tps = 1000.0 / gen_tps
+                # Prefer server's own TPS calculation
+                server_tps = timing.get("predicted_per_second")
+                if server_tps:
+                    return {
+                        "tps": round(server_tps, 2),
+                        "tokens_generated": tokens_generated,
+                        "duration_sec": round(duration, 3),
+                        "error": None,
+                    }
+                # Fall back to calculating from predicted_ms (total generation ms)
+                predicted_ms = timing.get("predicted_ms", 0)
+                if predicted_ms and tokens_generated:
+                    server_tps = tokens_generated * 1000.0 / predicted_ms
                     return {
                         "tps": round(server_tps, 2),
                         "tokens_generated": tokens_generated,

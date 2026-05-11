@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Compare Benchmarks{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Compare Benchmarks</h1>
+    <a href="{{ url_for('index') }}" class="btn">Back to Home</a>
+</div>
+
+<div class="card">
+    <h3>Select Models to Compare</h3>
+    <form method="GET" action="{{ url_for('configs.compare_benchmarks') }}" class="compare-selectors">
+        <div class="form-group">
+            <select name="config_id" multiple size="8">
+                {% for c in configs %}
+                <option value="{{ c.id }}" {% if c.id in selected_config_ids %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <p class="meta">Hold Ctrl/Cmd to select multiple models</p>
+        <button type="submit" class="btn btn-primary">Compare</button>
+    </form>
+</div>
+
+{% if benchmarks %}
+<div class="card" style="margin-top:1rem">
+    <h3>Benchmark Results</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Version</th>
+                <th>Recorded</th>
+                <th>TPS</th>
+                <th>VRAM</th>
+                <th>CPU</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in benchmarks %}
+            <tr>
+                <td><a href="{{ url_for('configs.view', config_id=b.config_id) }}">{{ b.config_name }}</a></td>
+                <td><a href="{{ url_for('versions.edit', version_id=b.version_id) }}">v{{ b.version_number }}</a></td>
+                <td>{{ b.recorded_at.strftime('%Y-%m-%d %H:%M') if b.recorded_at else '' }}</td>
+                <td>{{ '%.1f'|format(b.tps) if b.tps else '-' }}</td>
+                <td>{{ '%d'|format(b.vram_used_mb) ~ ' MB' if b.vram_used_mb else '-' }}</td>
+                <td>{{ '%.0f%%'|format(b.peak_cpu_pct) if b.peak_cpu_pct else '-' }}</td>
+                <td>{{ (b.notes or '')[:60] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% elif selected_config_ids %}
+<p class="empty">No benchmarks found for selected models.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Benchmarks - {{ config.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Benchmarks: {{ config.name }}</h1>
+    <div>
+        <a href="{{ url_for('configs.view', config_id=config.id) }}" class="btn">Back to Config</a>
+        <button class="btn btn-primary" onclick="openDiffModal()">Compare Commands</button>
+    </div>
+</div>
+
+{% if benchmarks %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Version</th>
+            <th>Recorded</th>
+            <th>TPS</th>
+            <th>VRAM</th>
+            <th>CPU</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set prev_version = None %}
+        {% for b in benchmarks %}
+        <tr class="{% if b.version_id == running_version_id %}running{% endif %}{% if b.version_number != prev_version %} version-group-start{% endif %}">
+            <td>
+                <a href="{{ url_for('versions.edit', version_id=b.version_id) }}">v{{ b.version_number }}</a>
+                {% if b.version_id == running_version_id %} <span class="status running" style="font-size:0.7rem;vertical-align:middle">●</span>{% endif %}
+                {% if b.version_status == 'working' %} <span class="badge working">✓</span>{% elif b.version_status == 'broken' %} <span class="badge broken">✗</span>{% endif %}
+            </td>
+            <td>{{ b.recorded_at.strftime('%Y-%m-%d %H:%M') if b.recorded_at else '' }}</td>
+            <td>{{ '%.1f'|format(b.tps) if b.tps else '-' }}</td>
+            <td>{{ '%d'|format(b.vram_used_mb) ~ ' MB' if b.vram_used_mb else '-' }}</td>
+            <td>{{ '%.0f%%'|format(b.peak_cpu_pct) if b.peak_cpu_pct else '-' }}</td>
+            <td>{{ (b.version_comments or '')[:60] }}</td>
+        </tr>
+        {%- set prev_version = b.version_number %}
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">No benchmarks yet. Run a benchmark from the config page.</p>
+{% endif %}
+
+<!-- Diff Modal -->
+<div id="diff-modal" class="modal-overlay" onclick="closeDiffModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Compare Command Flags</h3>
+            <button class="modal-close" onclick="closeDiffModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="diff-selectors">
+                <div class="form-group">
+                    <label>From Version</label>
+                    <select id="diff-v1">
+                        {% for v in versions %}
+                        <option value="{{ v.id }}">v{{ v.version_number }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>To Version</label>
+                    <select id="diff-v2">
+                        {% for v in versions %}
+                        <option value="{{ v.id }}" {% if loop.index > 1 %}selected{% endif %}>v{{ v.version_number }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="align-self: flex-end">
+                    <button class="btn btn-primary" onclick="loadDiff()">Compare</button>
+                </div>
+            </div>
+            <div id="diff-results" class="diff-results">
+                <p class="empty">Select versions and click Compare</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDiffModal() {
+    document.getElementById('diff-modal').classList.add('active');
+}
+
+function closeDiffModal(e) {
+    if (!e || e.target === document.getElementById('diff-modal')) {
+        document.getElementById('diff-modal').classList.remove('active');
+    }
+}
+
+async function loadDiff() {
+    const v1 = document.getElementById('diff-v1').value;
+    const v2 = document.getElementById('diff-v2').value;
+    const results = document.getElementById('diff-results');
+    results.innerHTML = '<p class="empty">Loading...</p>';
+
+    try {
+        const resp = await fetch(`/api/benchmarks/diff?v1=${v1}&v2=${v2}`);
+        const data = await resp.json();
+
+        if (data.error) {
+            results.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+            return;
+        }
+
+        let html = '';
+        html += `<div class="diff-versions"><span>v${data.version_1.version_number}</span> <strong>&rarr;</strong> <span>v${data.version_2.version_number}</span></div>`;
+
+        if (data.added.length > 0) {
+            html += '<div class="diff-section"><h4>Added</h4><ul class="diff-added">';
+            for (const item of data.added) {
+                const val = item.value !== null && item.value !== undefined ? ` <code>${item.value}</code>` : '';
+                html += `<li><code>${item.flag}</code>${val}</li>`;
+            }
+            html += '</ul></div>';
+        }
+
+        if (data.removed.length > 0) {
+            html += '<div class="diff-section"><h4>Removed</h4><ul class="diff-removed">';
+            for (const item of data.removed) {
+                const val = item.value !== null && item.value !== undefined ? ` <code>${item.value}</code>` : '';
+                html += `<li><code>${item.flag}</code>${val}</li>`;
+            }
+            html += '</ul></div>';
+        }
+
+        if (data.changed.length > 0) {
+            html += '<div class="diff-section"><h4>Changed</h4><ul class="diff-changed">';
+            for (const item of data.changed) {
+                const oldVal = item.old_value !== null && item.old_value !== undefined ? item.old_value : '(flag)';
+                const newVal = item.new_value !== null && item.new_value !== undefined ? item.new_value : '(flag)';
+                html += `<li><code>${item.flag}</code>: <span class="diff-old">${oldVal}</span> <strong>&rarr;</strong> <span class="diff-new">${newVal}</span></li>`;
+            }
+            html += '</ul></div>';
+        }
+
+        if (data.added.length === 0 && data.removed.length === 0 && data.changed.length === 0) {
+            html += '<p class="empty">No differences found</p>';
+        }
+
+        html += '<details class="diff-full-cmd"><summary>Full Commands</summary>';
+        html += '<div class="command-box"><input type="text" readonly value="' + data.command_1.replace(/"/g, '&quot;') + '"></div>';
+        html += '<div class="command-box"><input type="text" readonly value="' + data.command_2.replace(/"/g, '&quot;') + '"></div>';
+        html += '</details>';
+
+        results.innerHTML = html;
+    } catch (e) {
+        results.innerHTML = `<div class="alert alert-error">Failed to load diff: ${e.message}</div>`;
+    }
+}
+</script>
+{% endblock %}

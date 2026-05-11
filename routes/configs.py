@@ -71,6 +71,52 @@ def view(config_id):
     )
 
 
+@bp.route("/config/<int:config_id>/benchmarks")
+def benchmarks(config_id):
+    from models.configs import (
+        get_config,
+        get_all_versions,
+        get_all_config_benchmarks,
+    )
+    from services.screen_manager import get_running_version_id
+
+    config = get_config(config_id)
+    if not config:
+        flash("Config not found", "error")
+        return redirect(url_for("index"))
+
+    versions = get_all_versions(config_id)
+    benchmarks_data = get_all_config_benchmarks(config_id)
+    running_vid = get_running_version_id()
+
+    return render_template(
+        "configs/benchmarks.html",
+        config=config,
+        versions=versions,
+        benchmarks=benchmarks_data,
+        running_version_id=running_vid,
+    )
+
+
+@bp.route("/benchmarks/compare")
+def compare_benchmarks():
+    from models.configs import get_all_configs, get_all_model_benchmarks
+
+    config_ids = request.args.getlist("config_id", type=int)
+    all_configs = get_all_configs()
+
+    benchmarks_data = []
+    if config_ids:
+        benchmarks_data = get_all_model_benchmarks(config_ids)
+
+    return render_template(
+        "configs/compare_benchmarks.html",
+        configs=all_configs,
+        selected_config_ids=config_ids,
+        benchmarks=benchmarks_data,
+    )
+
+
 @bp.route("/config/<int:config_id>/edit", methods=["GET", "POST"])
 def edit(config_id):
     from models.configs import get_config, update_config
