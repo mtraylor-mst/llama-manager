@@ -128,3 +128,147 @@ class TestIndexRoute:
         mock_version.return_value = None
         resp = client.get("/")
         assert resp.status_code == 200
+
+
+class TestBenchmarkRoutes:
+    @patch("services.screen_manager.get_running_version_id")
+    @patch("services.screen_manager.get_status")
+    @patch("models.configs.get_all_config_benchmarks")
+    @patch("models.configs.get_all_versions")
+    @patch("models.configs.get_config")
+    def test_benchmarks_view(
+        self, mock_config, mock_versions, mock_benchmarks, mock_status, mock_vid, client
+    ):
+        mock_config.return_value = {"id": 1, "name": "Test Config"}
+        mock_versions.return_value = [{"id": 1, "version_number": 1}]
+        mock_benchmarks.return_value = [
+            {"id": 1, "tps": 30.0, "version_id": 1, "version_number": 1}
+        ]
+        mock_status.return_value = {
+            "running": False,
+            "state": "stopped",
+            "name": None,
+            "line": "",
+        }
+        mock_vid.return_value = None
+        resp = client.get("/config/1/benchmarks")
+        assert resp.status_code == 200
+
+    @patch("services.screen_manager.get_running_version_id")
+    @patch("services.screen_manager.get_status")
+    @patch("models.configs.get_all_config_benchmarks")
+    @patch("models.configs.get_all_versions")
+    @patch("models.configs.get_config")
+    def test_benchmarks_config_not_found(
+        self, mock_config, mock_versions, mock_benchmarks, mock_status, mock_vid, client
+    ):
+        mock_config.return_value = None
+        mock_status.return_value = {
+            "running": False,
+            "state": "stopped",
+            "name": None,
+            "line": "",
+        }
+        mock_vid.return_value = None
+        resp = client.get("/config/999/benchmarks", follow_redirects=False)
+        assert resp.status_code == 302
+
+    @patch("services.screen_manager.get_running_version_id")
+    @patch("services.screen_manager.get_status")
+    @patch("models.configs.get_all_model_benchmarks")
+    @patch("models.configs.get_all_configs")
+    def test_compare_benchmarks_no_selection(
+        self, mock_configs, mock_benchmarks, mock_status, mock_vid, client
+    ):
+        mock_configs.return_value = [
+            {"id": 1, "name": "Alpha"},
+            {"id": 2, "name": "Beta"},
+        ]
+        mock_status.return_value = {
+            "running": False,
+            "state": "stopped",
+            "name": None,
+            "line": "",
+        }
+        mock_vid.return_value = None
+        resp = client.get("/benchmarks/compare")
+        assert resp.status_code == 200
+        mock_benchmarks.assert_not_called()
+
+    @patch("services.screen_manager.get_running_version_id")
+    @patch("services.screen_manager.get_status")
+    @patch("models.configs.get_all_model_benchmarks")
+    @patch("models.configs.get_all_configs")
+    def test_compare_benchmarks_with_selection(
+        self, mock_configs, mock_benchmarks, mock_status, mock_vid, client
+    ):
+        mock_configs.return_value = [
+            {"id": 1, "name": "Alpha"},
+            {"id": 2, "name": "Beta"},
+        ]
+        mock_benchmarks.return_value = [
+            {
+                "id": 1,
+                "tps": 30.0,
+                "config_id": 1,
+                "config_name": "Alpha",
+                "version_id": 10,
+                "version_number": 1,
+            },
+            {
+                "id": 2,
+                "tps": 50.0,
+                "config_id": 2,
+                "config_name": "Beta",
+                "version_id": 20,
+                "version_number": 1,
+            },
+        ]
+        mock_status.return_value = {
+            "running": False,
+            "state": "stopped",
+            "name": None,
+            "line": "",
+        }
+        mock_vid.return_value = None
+        resp = client.get("/benchmarks/compare?config_id=1&config_id=2")
+        assert resp.status_code == 200
+        mock_benchmarks.assert_called_once_with([1, 2])
+
+    @patch("services.command_diff.diff_commands")
+    def test_benchmark_diff_success(self, mock_diff, client):
+        mock_diff.return_value = {
+            "added": [],
+            "removed": [{"flag": "--mmap", "value": None}],
+            "changed": [{"flag": "-c", "old_value": "4096", "new_value": "8192"}],
+        }
+        resp = client.get("/api/benchmarks/diff?v1=1&v2=2")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert len(data["removed"]) == 1
+        assert len(data["changed"]) == 1
+        mock_diff.assert_called_once_with(1, 2)
+
+    @patch("services.command_diff.diff_commands")
+    def test_benchmark_diff_missing_v1(self, mock_diff, client):
+        resp = client.get("/api/benchmarks/diff?v2=2")
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert "error" in data
+        mock_diff.assert_not_called()
+
+    @patch("services.command_diff.diff_commands")
+    def test_benchmark_diff_missing_both(self, mock_diff, client):
+        resp = client.get("/api/benchmarks/diff")
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert "error" in data
+        mock_diff.assert_not_called()
+
+    @patch("services.command_diff.diff_commands")
+    def test_benchmark_diff_invalid_type(self, mock_diff, client):
+        resp = client.get("/api/benchmarks/diff?v1=abc&v2=2")
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert "error" in data
+        mock_diff.assert_not_called()
