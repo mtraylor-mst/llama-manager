@@ -23,6 +23,7 @@ from models.configs import (
     get_performance_metrics,
     get_all_config_benchmarks,
     get_all_model_benchmarks,
+    delete_performance_metric,
     get_common_options,
     is_common_option,
     add_common_option,
@@ -741,3 +742,25 @@ class TestGetAllModelBenchmarks:
         cur = _get_cur(mock_get_conn)
         assert list(cur.executed_params[0]) == [1, 2, 3]
         assert "IN (%s, %s, %s)" in cur.executed_sql[0]
+
+
+class TestDeletePerformanceMetric:
+    @patch("models.configs.get_conn")
+    def test_deletes_existing_metric(self, mock_get_conn):
+        _setup_mock(mock_get_conn, queue=[], rowcount=1)
+        result = delete_performance_metric(42)
+        assert result is True
+
+    @patch("models.configs.get_conn")
+    def test_returns_false_when_not_found(self, mock_get_conn):
+        _setup_mock(mock_get_conn, queue=[], rowcount=0)
+        result = delete_performance_metric(999)
+        assert result is False
+
+    @patch("models.configs.get_conn")
+    def test_uses_correct_metric_id(self, mock_get_conn):
+        _setup_mock(mock_get_conn, queue=[], rowcount=1)
+        delete_performance_metric(77)
+        cur = _get_cur(mock_get_conn)
+        assert cur.executed_params[0] == (77,)
+        assert "DELETE FROM performance_metrics" in cur.executed_sql[0]

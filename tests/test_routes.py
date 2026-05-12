@@ -272,3 +272,17 @@ class TestBenchmarkRoutes:
         data = resp.get_json()
         assert "error" in data
         mock_diff.assert_not_called()
+
+    @patch("models.configs.delete_performance_metric")
+    def test_delete_benchmark_success(self, mock_delete, client):
+        mock_delete.return_value = True
+        resp = client.post("/config/1/benchmark/5/delete", follow_redirects=False)
+        assert resp.status_code == 302
+        mock_delete.assert_called_once_with(5)
+
+    @patch("models.configs.delete_performance_metric")
+    def test_delete_benchmark_not_found(self, mock_delete, client):
+        mock_delete.return_value = False
+        resp = client.post("/config/1/benchmark/999/delete", follow_redirects=False)
+        assert resp.status_code == 302
+        mock_delete.assert_called_once_with(999)
