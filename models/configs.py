@@ -543,6 +543,15 @@ def get_all_model_benchmarks(config_ids):
             return cur.fetchall()
 
 
+def delete_performance_metric(metric_id):
+    """Delete a single benchmark result."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM performance_metrics WHERE id = %s", (metric_id,))
+            conn.commit()
+            return cur.rowcount > 0
+
+
 def get_common_options():
     """Get all common options ordered by display_order."""
     with get_conn() as conn:

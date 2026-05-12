@@ -20,6 +20,7 @@
             <th>VRAM</th>
             <th>CPU</th>
             <th>Notes</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -36,6 +37,12 @@
             <td>{{ '%d'|format(b.vram_used_mb) ~ ' MB' if b.vram_used_mb else '-' }}</td>
             <td>{{ '%.0f%%'|format(b.peak_cpu_pct) if b.peak_cpu_pct else '-' }}</td>
             <td>{{ (b.version_comments or '')[:60] }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('configs.delete_benchmark', config_id=config.id, metric_id=b.id) }}" class="inline" onsubmit="return confirm('Delete this benchmark result?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </td>
         </tr>
         {%- set prev_version = b.version_number %}
         {% endfor %}

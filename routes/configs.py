@@ -98,6 +98,17 @@ def benchmarks(config_id):
     )
 
 
+@bp.route("/config/<int:config_id>/benchmark/<int:metric_id>/delete", methods=["POST"])
+def delete_benchmark(config_id, metric_id):
+    from models.configs import delete_performance_metric
+
+    if not delete_performance_metric(metric_id):
+        flash("Benchmark not found", "error")
+    else:
+        flash("Benchmark deleted", "success")
+    return redirect(url_for("configs.benchmarks", config_id=config_id))
+
+
 @bp.route("/benchmarks/compare")
 def compare_benchmarks():
     from models.configs import get_all_configs, get_all_model_benchmarks
