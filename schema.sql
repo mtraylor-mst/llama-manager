@@ -216,11 +216,15 @@ CREATE TABLE IF NOT EXISTS v_speculative (
     spec_ngram_size_n INT,
     spec_ngram_size_m INT,
     spec_ngram_min_hits INT,
+    spec_draft_n_max INT,
     spec_replace_target VARCHAR(255),
     spec_replace_draft VARCHAR(255),
     override_tensor_draft TEXT,
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
 );
+
+-- Migration: Add spec_draft_n_max column if it doesn't exist yet
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_draft_n_max INT;
 
 -- Chat & Templates
 CREATE TABLE IF NOT EXISTS v_chat_templates (
@@ -355,4 +359,45 @@ CREATE TABLE IF NOT EXISTS v_dry_sequence_breakers (
     version_id INT NOT NULL,
     breaker_char VARCHAR(10) NOT NULL,
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
+);
+
+-- VRAM Safety & OOM Prediction
+CREATE TABLE IF NOT EXISTS model_metadata (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    model_path VARCHAR(2048) NOT NULL,
+    architecture VARCHAR(50),
+    n_layers INT,
+    n_embd INT,
+    n_head INT,
+    n_head_kv INT,
+    n_ctx_train INT,
+    key_length INT,
+    value_length INT,
+    file_size_bytes BIGINT,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_model_path (model_path(767))
+);
+
+CREATE TABLE IF NOT EXISTS vram_stress_tests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    version_id INT NOT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    status VARCHAR(20) DEFAULT 'running',
+    total_vram_mb INT,
+    compaction_coefficient DECIMAL(6,4),
+    failure_ctx_tokens INT NULL,
+    model_weight_size_mb INT,
+    kv_per_token_bytes DECIMAL(8,4),
+    FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS vram_stress_data_points (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    stress_test_id INT NOT NULL,
+    ctx_tokens INT NOT NULL,
+    vram_used_mb INT,
+    peak_vram_mb INT,
+    tps DECIMAL(8,2),
+    FOREIGN KEY (stress_test_id) REFERENCES vram_stress_tests(id) ON DELETE CASCADE
 );

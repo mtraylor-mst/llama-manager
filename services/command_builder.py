@@ -162,6 +162,7 @@ FLAG_DEFINITIONS = {
         ("--spec-ngram-size-n", None, False, None),
         ("--spec-ngram-size-m", None, False, None),
         ("--spec-ngram-min-hits", None, False, None),
+        ("--spec-draft-n-max", None, False, None),
         ("--spec-replace", None, False, None),
         ("-otd", "--override-tensor-draft", False, None),
     ],
@@ -360,6 +361,7 @@ COLUMN_MAP = {
         "spec_ngram_size_n": "--spec-ngram-size-n",
         "spec_ngram_size_m": "--spec-ngram-size-m",
         "spec_ngram_min_hits": "--spec-ngram-min-hits",
+        "spec_draft_n_max": "--spec-draft-n-max",
     },
     "chat_templates": {
         "chat_template": "--chat-template",

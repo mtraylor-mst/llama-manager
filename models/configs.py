@@ -176,6 +176,7 @@ CATEGORY_COLUMNS = {
         "spec_ngram_size_n",
         "spec_ngram_size_m",
         "spec_ngram_min_hits",
+        "spec_draft_n_max",
         "spec_replace_target",
         "spec_replace_draft",
         "override_tensor_draft",

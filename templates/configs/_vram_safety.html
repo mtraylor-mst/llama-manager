@@ -1,0 +1,186 @@
+{% if featured %}
+<div class="card" id="vram-safety-card">
+    <h3>VRAM Safety <span id="safety-status-badge"></span></h3>
+    <div id="safety-content">
+        <span style="color:var(--text-dim)">Loading...</span>
+    </div>
+</div>
+
+<div id="stress-test-status"></div>
+
+<script>
+(function() {
+    const versionId = {{ featured.id }};
+    const ctxSizeEl = document.querySelector('[data-ctx-size]');
+    const ctxSize = ctxSizeEl ? parseInt(ctxSizeEl.dataset.ctxSize) : 2048;
+
+    fetch(`/version/${versionId}/vram-safety`)
+        .then(r => r.json())
+        .then(renderSafety)
+        .catch(() => {
+            document.getElementById('safety-content').innerHTML =
+                '<span style="color:var(--text-dim)">Unable to load safety data. Run the server at least once to generate model metadata.</span>';
+        });
+
+    function renderSafety(safety) {
+        if (!safety || safety.error) {
+            document.getElementById('safety-content').innerHTML =
+                '<span style="color:var(--text-dim)">Insufficient data for safety calculation.</span>';
+            return;
+        }
+
+        const colorMap = { green: 'var(--success)', yellow: 'var(--warning)', red: 'var(--danger)' };
+        const color = colorMap[safety.status] || 'var(--text)';
+
+        document.getElementById('safety-status-badge').innerHTML =
+            `<span class="badge ${safety.status}">${safety.status.toUpperCase()}</span>`;
+
+        const sourceLabel = safety.source === 'empirical'
+            ? 'Empirical (High Confidence)'
+            : 'Theoretical (Low Confidence)';
+
+        let rows = `
+            <tr><td>Model Weights</td><td>${safety.weight_size_mb} MB</td></tr>
+            <tr><td>KV Cache (${ctxSize} tokens)</td><td>${safety.kv_cache_mb} MB</td></tr>`;
+
+        if (safety.source === 'empirical') {
+            rows += `
+            <tr><td>Compaction Coefficient</td><td>${(safety.compaction_coefficient || 0).toFixed(4)}</td></tr>
+            <tr><td>KV Per Token (empirical)</td><td>${safety.kv_per_token_bytes} bytes</td></tr>`;
+            if (safety.failure_ctx_tokens) {
+                rows += `<tr><td>Failure Threshold</td><td>${safety.failure_ctx_tokens} tokens</td></tr>`;
+            }
+        } else {
+            rows += `
+            <tr><td>Compaction Buffer</td><td>${Math.round((safety.compaction_buffer || 0.1) * 100)}% (estimated)</td></tr>
+            <tr><td>KV Per Token (theoretical)</td><td>${safety.kv_per_token_bytes} bytes</td></tr>`;
+        }
+
+        let actionHtml = '';
+        if (safety.source === 'theoretical') {
+            actionHtml = `
+            <div style="margin-top:0.5rem;">
+                <button class="btn btn-primary" onclick="runStressTest(${versionId})">Run Stress Test</button>
+                <span style="color:var(--text-dim); font-size:0.8rem; margin-left:0.5rem;">
+                    Run an empirical test for accurate measurements
+                </span>
+            </div>`;
+        }
+
+        document.getElementById('safety-content').innerHTML = `
+            <div style="display:flex; gap:2rem; margin-bottom:0.75rem;">
+                <div>
+                    <span style="color:var(--text-dim)">Margin:</span>
+                    <strong style="color:${color}">${safety.margin_pct}% (${safety.margin_mb} MB)</strong>
+                </div>
+                <div>
+                    <span style="color:var(--text-dim)">Predicted Peak:</span>
+                    <strong>${safety.predicted_peak_mb} MB</strong>
+                </div>
+                <div>
+                    <span style="color:var(--text-dim)">Total VRAM:</span>
+                    <strong>${safety.total_vram_mb} MB</strong>
+                </div>
+            </div>
+            <table class="table" style="margin-bottom:0.75rem;">
+                <thead><tr><th>Component</th><th>VRAM</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <span style="color:var(--text-dim); font-size:0.75rem;">Source: ${sourceLabel}</span>
+            ${actionHtml}`;
+    }
+})();
+
+async function runStressTest(versionId) {
+    const statusEl = document.getElementById('stress-test-status');
+    statusEl.innerHTML = '<div class="alert alert-info">Starting stress test...</div>';
+
+    try {
+        const resp = await csrfSafeFetch(`/version/${versionId}/vram-stress-test`, {
+            method: 'POST',
+        });
+        const data = await resp.json();
+
+        if (resp.status === 409 && data.running_test_id) {
+            statusEl.innerHTML = `<div class="alert alert-warning">
+                A stress test is already running.
+                <a href="#" onclick="pollStressTest(${data.running_test_id})">View progress →</a>
+            </div>`;
+            pollStressTest(data.running_test_id);
+            return;
+        }
+
+        if (data.error) {
+            statusEl.innerHTML = `<div class="alert alert-error">Error: ${data.error}</div>`;
+            return;
+        }
+
+        pollStressTest(data.test_id);
+    } catch (e) {
+        statusEl.innerHTML = `<div class="alert alert-error">Failed to start: ${e.message}</div>`;
+    }
+}
+
+function pollStressTest(testId) {
+    const statusEl = document.getElementById('stress-test-status');
+
+    async function poll() {
+        try {
+            const resp = await fetch(`/vram-stress-test/${testId}`);
+            const data = await resp.json();
+
+            if (data.status === 'running' || data.is_running) {
+                statusEl.innerHTML = `
+                    <div class="card" style="margin-top:1rem">
+                        <h3>Stress Test Running <span class="status running">● Active</span></h3>
+                        <p>Progress: ${data.total_steps || 0} steps completed</p>
+                        <p style="color:var(--text-dim)">Started: ${data.started_at || 'unknown'}</p>
+                        <button class="btn btn-danger" onclick="cancelStressTest(${testId})">Cancel</button>
+                    </div>`;
+                setTimeout(poll, 5000);
+            } else if (data.status === 'completed') {
+                const pointRows = (data.data_points || []).map(dp => `
+                    <tr>
+                        <td>${dp.ctx_tokens}</td>
+                        <td>${dp.vram_used_mb ? dp.vram_used_mb + ' MB' : '-'}</td>
+                        <td>${dp.peak_vram_mb ? dp.peak_vram_mb + ' MB' : '-'}</td>
+                        <td>${dp.tps || '-'}</td>
+                    </tr>
+                `).join('');
+
+                statusEl.innerHTML = `
+                    <div class="card" style="margin-top:1rem">
+                        <h3>Stress Test Complete</h3>
+                        <table class="table">
+                            <thead><tr><th>CTX Tokens</th><th>VRAM Used</th><th>Peak VRAM</th><th>TPS</th></tr></thead>
+                            <tbody>${pointRows}</tbody>
+                        </table>
+                        <p><strong>Compaction Coefficient:</strong> ${data.compaction_coefficient != null ? data.compaction_coefficient.toFixed(4) : 'N/A'}</p>
+                        <p><strong>KV Per Token:</strong> ${data.kv_per_token_bytes != null ? data.kv_per_token_bytes + ' bytes' : 'N/A'}</p>
+                        ${data.failure_ctx_tokens ? `<p style="color:var(--danger)">OOM at: ${data.failure_ctx_tokens} tokens</p>` : ''}
+                        <button class="btn" onclick="location.reload()">Refresh Safety Card</button>
+                    </div>`;
+            } else if (data.status === 'cancelled') {
+                statusEl.innerHTML = '<div class="alert alert-warning">Stress test cancelled.</div>';
+            } else {
+                statusEl.innerHTML = `<div class="alert alert-error">Stress test failed: ${data.status}</div>`;
+            }
+        } catch (e) {
+            // Stop polling on error
+        }
+    }
+
+    poll();
+}
+
+async function cancelStressTest(testId) {
+    const statusEl = document.getElementById('stress-test-status');
+    try {
+        await csrfSafeFetch(`/vram-stress-test/${testId}/cancel`, { method: 'POST' });
+        statusEl.innerHTML = '<div class="alert alert-warning">Stress test cancelled.</div>';
+    } catch (e) {
+        statusEl.innerHTML = `<div class="alert alert-error">Failed to cancel: ${e.message}</div>`;
+    }
+}
+</script>
+{% endif %}

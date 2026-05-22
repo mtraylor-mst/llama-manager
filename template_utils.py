@@ -95,12 +95,11 @@ CATEGORY_FIELDS = {
             "KV Cache Type K",
             "select",
             [
-                ("f16", "f16"),
                 ("f32", "f32"),
+                ("f16", "f16"),
                 ("bf16", "bf16"),
                 ("q8_0", "q8_0"),
                 ("q4_0", "q4_0"),
-                ("q5_0", "q5_0"),
             ],
         ),
         (
@@ -108,12 +107,11 @@ CATEGORY_FIELDS = {
             "KV Cache Type V",
             "select",
             [
-                ("f16", "f16"),
                 ("f32", "f32"),
+                ("f16", "f16"),
                 ("bf16", "bf16"),
                 ("q8_0", "q8_0"),
                 ("q4_0", "q4_0"),
-                ("q5_0", "q5_0"),
             ],
         ),
         ("mmap", "Memory Map", "tristate", None),
@@ -171,10 +169,12 @@ CATEGORY_FIELDS = {
                 ("ngram-cache", "ngram-cache"),
                 ("ngram-simple", "ngram-simple"),
                 ("ngram-map-k", "ngram-map-k"),
+                ("draft-mtp", "draft-mtp (MTP)"),
             ],
         ),
         ("spec_ngram_size_n", "Ngram Size N", "int", "default: 12"),
         ("spec_ngram_size_m", "Ngram Size M", "int", "default: 48"),
+        ("spec_draft_n_max", "Draft N Max", "int", None),
     ],
     "chat_templates": [
         (
