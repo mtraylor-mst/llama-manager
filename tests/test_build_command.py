@@ -503,6 +503,17 @@ class TestBuildCommandComplexTables:
         assert "--override-tensor-draft" in cmd
         assert "attn_q=cpu" in cmd
 
+    @patch("models.configs.get_all_version_data")
+    def test_spec_draft_n_max(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={"spec_draft_n_max": 16}
+        )
+        cmd = build_command(1)
+        assert "--spec-draft-n-max" in cmd
+        assert "16" in cmd
+
 
 class TestGetModelsInDir:
     def test_returns_gguf_files(self, tmp_path):

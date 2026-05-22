@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}VRAM Stress Test{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>VRAM Stress Tests</h1>
+</div>
+
+<p style="color:var(--text-dim); margin-bottom:1.5rem;">
+    Measure actual VRAM usage at different context lengths to get accurate OOM predictions.
+    Only one stress test can run at a time across all configs.
+    Only configs with working versions are shown.
+</p>
+
+{% if configs %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Config</th>
+            <th>Version</th>
+            <th>Last Test</th>
+            <th>Compaction</th>
+            <th>KV/Token</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in configs %}
+        <tr id="row-{{ item.config.id }}" data-view-url="{{ url_for('configs.view', config_id=item.config.id) }}">
+            <td>
+                <a href="{{ url_for('configs.view', config_id=item.config.id) }}">{{ item.config.name }}</a>
+            </td>
+            <td>
+                <select class="version-select" onchange="updateRow({{ item.config.id }}, this.value)" data-default="{{ item.default_version_id }}">
+                    {% for ve in item.versions %}
+                    <option value="{{ ve.version.id }}" {% if ve.version.id == item.default_version_id %}selected{% endif %}>
+                        v{{ ve.version.version_number }}{% if ve.version.status == 'working' %} ✓{% elif ve.version.status == 'broken' %} ✗{% endif %}{% if ve.version.comments %} — {{ ve.version.comments[:60] }}{% if ve.version.comments|length > 60 %}...{% endif %}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="test-status">
+                {% set selected_ve = item.versions | selectattr('version.id', 'equalto', item.default_version_id) | first %}
+                {% if selected_ve and selected_ve.latest_test %}
+                    {% set test = selected_ve.latest_test %}
+                    {% if test.is_running %}
+                        <span class="status running">● Running</span>
+                        <div style="font-size:0.8rem; color:var(--text-dim);">{{ test.total_steps }} steps</div>
+                    {% elif test.status == 'completed' %}
+                        <span class="status running">● Completed</span>
+                        <div style="font-size:0.8rem; color:var(--text-dim);">{{ test.completed_at or '' }}</div>
+                    {% elif test.status == 'failed' %}
+                        <span class="status stopped">● Failed</span>
+                    {% elif test.status == 'cancelled' %}
+                        <span style="color:var(--warning)">Cancelled</span>
+                    {% else %}
+                        <span style="color:var(--text-dim)">{{ test.status }}</span>
+                    {% endif %}
+                {% else %}
+                    <span style="color:var(--text-dim)">No tests</span>
+                {% endif %}
+            </td>
+            <td class="comp-cell">
+                {% set selected_ve2 = item.versions | selectattr('version.id', 'equalto', item.default_version_id) | first %}
+                {% if selected_ve2 and selected_ve2.latest_test and selected_ve2.latest_test.compaction_coefficient is not none %}
+                    {{ "%.4f"|format(selected_ve2.latest_test.compaction_coefficient) }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td class="kv-cell">
+                {% set selected_ve3 = item.versions | selectattr('version.id', 'equalto', item.default_version_id) | first %}
+                {% if selected_ve3 and selected_ve3.latest_test and selected_ve3.latest_test.kv_per_token_bytes is not none %}
+                    {{ selected_ve3.latest_test.kv_per_token_bytes }} B
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td class="actions">
+                <a href="{{ url_for('configs.view', config_id=item.config.id) }}" class="btn">View</a>
+                <button class="btn btn-primary run-btn" onclick="runStressTest({{ item.config.id }}, this)">Run Test</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">No configs with working versions found.</p>
+{% endif %}
+
+<script>
+function getSelectedVersionId(configId) {
+    const row = document.getElementById('row-' + configId);
+    const select = row.querySelector('.version-select');
+    return parseInt(select.value);
+}
+
+function updateRow(configId, versionId) {
+    fetch(`/version/${versionId}/vram-stress-test/latest`)
+        .then(r => r.json())
+        .then(data => {
+            const row = document.getElementById('row-' + configId);
+            const statusCell = row.querySelector('.test-status');
+            const compCell = row.querySelector('.comp-cell');
+            const kvCell = row.querySelector('.kv-cell');
+
+            if (data && data.id) {
+                if (data.is_running || data.status === 'running') {
+                    statusCell.innerHTML = '<span class="status running">● Running</span><div style="font-size:0.8rem; color:var(--text-dim);">' + (data.total_steps || 0) + ' steps</div>';
+                } else if (data.status === 'completed') {
+                    statusCell.innerHTML = '<span class="status running">● Completed</span><div style="font-size:0.8rem; color:var(--text-dim);">' + (data.completed_at || '') + '</div>';
+                } else if (data.status === 'failed') {
+                    statusCell.innerHTML = '<span class="status stopped">● Failed</span>';
+                } else if (data.status === 'cancelled') {
+                    statusCell.innerHTML = '<span style="color:var(--warning)">Cancelled</span>';
+                } else {
+                    statusCell.innerHTML = '<span style="color:var(--text-dim)">' + data.status + '</span>';
+                }
+                compCell.textContent = data.compaction_coefficient != null ? parseFloat(data.compaction_coefficient).toFixed(4) : '—';
+                kvCell.textContent = data.kv_per_token_bytes != null ? data.kv_per_token_bytes + ' B' : '—';
+            } else {
+                statusCell.innerHTML = '<span style="color:var(--text-dim)">No tests</span>';
+                compCell.textContent = '—';
+                kvCell.textContent = '—';
+            }
+        });
+}
+
+async function runStressTest(configId, btn) {
+    const versionId = getSelectedVersionId(configId);
+    const row = document.getElementById('row-' + configId);
+    const statusCell = row.querySelector('.test-status');
+
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    statusCell.innerHTML = '<span class="status running">● Starting</span>';
+
+    try {
+        const resp = await csrfSafeFetch(`/version/${versionId}/vram-stress-test`, {
+            method: 'POST',
+        });
+        const data = await resp.json();
+
+        if (resp.status === 409 && data.running_test_id) {
+            statusCell.innerHTML = '<span style="color:var(--warning)">Already running</span>';
+            btn.disabled = false;
+            btn.textContent = 'Run Test';
+            pollStressTest(data.running_test_id, configId);
+            return;
+        }
+
+        if (data.error) {
+            statusCell.innerHTML = '<span style="color:var(--danger)">' + data.error + '</span>';
+            btn.disabled = false;
+            btn.textContent = 'Run Test';
+            return;
+        }
+
+        pollStressTest(data.test_id, configId);
+    } catch (e) {
+        statusCell.innerHTML = '<span style="color:var(--danger)">Failed: ' + e.message + '</span>';
+        btn.disabled = false;
+        btn.textContent = 'Run Test';
+    }
+}
+
+function pollStressTest(testId, configId) {
+    const row = document.getElementById('row-' + configId);
+    const viewUrl = row.dataset.viewUrl;
+    const statusCell = row.querySelector('.test-status');
+    const compCell = row.querySelector('.comp-cell');
+    const kvCell = row.querySelector('.kv-cell');
+    const actionsCell = row.querySelector('.actions');
+
+    async function poll() {
+        try {
+            const resp = await fetch(`/vram-stress-test/${testId}`);
+            const data = await resp.json();
+
+            if (data.status === 'running' || data.is_running) {
+                statusCell.innerHTML = '<span class="status running">● Running</span><div style="font-size:0.8rem; color:var(--text-dim);">' + (data.total_steps || 0) + ' steps</div>';
+                actionsCell.innerHTML = '<a href="' + viewUrl + '" class="btn">View</a><button class="btn btn-danger" onclick="cancelStressTest(' + testId + ', ' + configId + ')">Cancel</button>';
+                setTimeout(poll, 5000);
+            } else if (data.status === 'completed') {
+                statusCell.innerHTML = '<span class="status running">● Completed</span><div style="font-size:0.8rem; color:var(--text-dim);">' + (data.completed_at || '') + '</div>';
+                compCell.textContent = data.compaction_coefficient != null ? parseFloat(data.compaction_coefficient).toFixed(4) : '—';
+                kvCell.textContent = data.kv_per_token_bytes != null ? data.kv_per_token_bytes + ' B' : '—';
+                const versionId = getSelectedVersionId(configId);
+                actionsCell.innerHTML = '<a href="' + viewUrl + '" class="btn">View</a><button class="btn btn-primary run-btn" onclick="runStressTest(' + configId + ', this)">Run Again</button>';
+            } else if (data.status === 'cancelled') {
+                statusCell.innerHTML = '<span style="color:var(--warning)">Cancelled</span>';
+                actionsCell.innerHTML = '<a href="' + viewUrl + '" class="btn">View</a><button class="btn btn-primary run-btn" onclick="runStressTest(' + configId + ', this)">Run Test</button>';
+            } else {
+                statusCell.innerHTML = '<span style="color:var(--danger)">' + data.status + '</span>';
+            }
+        } catch (e) {
+            // Stop polling
+        }
+    }
+
+    poll();
+}
+
+async function cancelStressTest(testId, configId) {
+    const row = document.getElementById('row-' + configId);
+    const viewUrl = row.dataset.viewUrl;
+    const statusCell = row.querySelector('.test-status');
+    const actionsCell = row.querySelector('.actions');
+
+    try {
+        await csrfSafeFetch(`/vram-stress-test/${testId}/cancel`, { method: 'POST' });
+        statusCell.innerHTML = '<span style="color:var(--warning)">Cancelled</span>';
+        actionsCell.innerHTML = '<a href="' + viewUrl + '" class="btn">View</a><button class="btn btn-primary run-btn" onclick="runStressTest(' + configId + ', this)">Run Test</button>';
+    } catch (e) {
+        statusCell.innerHTML = '<span style="color:var(--danger)">Failed to cancel</span>';
+    }
+}
+</script>
+{% endblock %}

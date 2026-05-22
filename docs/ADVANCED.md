@@ -195,10 +195,11 @@ Accelerate generation using a draft model or ngram-based speculation.
 | Draft Context Size | `-cd` <br> `--ctx-size-draft` | — | Context size for the draft model (defaults to main context). |
 | Devices (Draft) | `-devd` <br> `--device-draft` | — | GPU devices assigned to the draft model. |
 | GPU Layers (Draft) | `-ngld` <br> `--gpu-layers-draft` | — | Number of draft model layers to offload to GPU. |
-| Spec Type | `--spec-type` | none | Speculation method: `none`, `ngram-cache`, `ngram-simple`, `ngram-map-k`. |
+| Spec Type | `--spec-type` | none | Speculation method: `none`, `ngram-cache`, `ngram-simple`, `ngram-map-k`, `draft-mtp`. |
 | Ngram Size N | `--spec-ngram-size-n` | 12 | Minimum n-gram size for ngram-based speculation. |
 | Ngram Size M | `--spec-ngram-size-m` | 48 | Maximum n-gram size for ngram-based speculation. |
 | Ngram Min Hits | `--spec-ngram-min-hits` | — | Minimum historical hits required before an n-gram is used for speculation. |
+| Draft N Max | `--spec-draft-n-max` | — | Maximum number of draft tokens for MTP speculative decoding. |
 | Override Tensor Draft | `-otd` <br> `--override-tensor-draft` | — | Tensor override pattern for the draft model. |
 
 ### Chat & Templates

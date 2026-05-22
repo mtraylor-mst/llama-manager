@@ -8,12 +8,57 @@ from flask import (
     url_for,
     Response,
     stream_with_context,
+    render_template,
 )
 import html as html_module
 from utils.rate_limit import rate_limit
 
 bp = Blueprint("server", __name__)
 logger = logging.getLogger(__name__)
+
+
+@bp.route("/vram-stress-test")
+def vram_stress_test_page():
+    """Dedicated page listing all versions with stress test status and launch controls."""
+    from models.configs import get_all_configs, get_all_versions
+
+    from services.vram_stress_test import get_latest_stress_test
+
+    configs = []
+    for cfg in get_all_configs():
+        versions = get_all_versions(cfg["id"])
+        if not versions:
+            continue
+
+        # Only show configs that have at least one working version
+        working = [v for v in versions if v.get("status") == "working"]
+        if not working:
+            continue
+
+        # Default to latest working version
+        default_version = working[0]
+
+        # Build version list with stress test info
+        version_entries = []
+        for v in versions:
+            latest = get_latest_stress_test(v["id"])
+            version_entries.append(
+                {
+                    "version": v,
+                    "latest_test": latest,
+                }
+            )
+
+        configs.append(
+            {
+                "config": cfg,
+                "versions": version_entries,
+                "default_version_id": default_version["id"],
+                "working_count": len(working),
+            }
+        )
+
+    return render_template("vram_stress_test/index.html", configs=configs)
 
 
 @bp.route("/server/status")
@@ -215,3 +260,68 @@ def import_config():
             return '<div class="alert alert-error">Import failed — check server logs for details.</div>'
         flash("Import failed — check server logs for details.", "error")
         return redirect(request.referrer or url_for("index"))
+
+
+@bp.route("/version/<int:version_id>/vram-safety")
+def vram_safety(version_id):
+    """GET — Return VRAM safety calculation (JSON)."""
+    from services.vram_safety import get_safety
+
+    result = get_safety(version_id)
+    if result is None:
+        return jsonify({"error": "Insufficient data for safety calculation"}), 404
+    return jsonify(result)
+
+
+@bp.route("/version/<int:version_id>/vram-stress-test", methods=["POST"])
+def start_stress_test(version_id):
+    """POST — Start a stress test in background thread."""
+    from services.vram_stress_test import run_stress_test
+
+    result = run_stress_test(version_id)
+    if "error" in result:
+        if "running_test_id" in result:
+            return jsonify(
+                {
+                    "error": result["error"],
+                    "running_test_id": result["running_test_id"],
+                    "poll_url": url_for(
+                        "server.stress_test_status",
+                        test_id=result["running_test_id"],
+                    ),
+                }
+            ), 409
+        return jsonify({"error": result["error"]}), 400
+    return jsonify(result)
+
+
+@bp.route("/version/<int:version_id>/vram-stress-test/latest")
+def latest_stress_test(version_id):
+    """GET — Get most recent stress test status/results (JSON)."""
+    from services.vram_stress_test import get_latest_stress_test
+
+    result = get_latest_stress_test(version_id)
+    if result is None:
+        return jsonify({"message": "No stress tests for this version"})
+    return jsonify(result)
+
+
+@bp.route("/vram-stress-test/<int:test_id>")
+def stress_test_status(test_id):
+    """GET — Poll for stress test progress (JSON, used by HTMX polling)."""
+    from services.vram_stress_test import get_stress_test_status
+
+    result = get_stress_test_status(test_id)
+    if result is None:
+        return jsonify({"error": "Test not found"}), 404
+    return jsonify(result)
+
+
+@bp.route("/vram-stress-test/<int:test_id>/cancel", methods=["POST"])
+def cancel_stress_test(test_id):
+    """POST — Cancel a running stress test."""
+    from services.vram_stress_test import cancel_stress_test
+
+    if cancel_stress_test(test_id):
+        return jsonify({"message": "Test cancelled"})
+    return jsonify({"error": "Test not found or already completed"}), 404
