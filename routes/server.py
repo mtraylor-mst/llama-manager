@@ -61,19 +61,40 @@ def vram_stress_test_page():
     return render_template("vram_stress_test/index.html", configs=configs)
 
 
+@bp.route("/server/health")
+def health():
+    """GET — Check llama-server HTTP API health (JSON)."""
+    from services.screen_manager import get_running_version_id
+    from services.server_health import check_health
+
+    running_vid = get_running_version_id()
+    if not running_vid:
+        return jsonify({
+            "healthy": False,
+            "response_time_ms": 0,
+            "status": None,
+            "error": "No server running",
+        })
+    result = check_health(version_id=running_vid)
+    return jsonify(result)
+
+
 @bp.route("/server/status")
 def status():
     from services.screen_manager import get_status, get_running_version_id
+    from services.server_health import check_health
 
     st = get_status()
     running_vid = get_running_version_id() if st["running"] else None
 
     # Look up version details for display
     running_ver_info = None
+    health_data = None
     if running_vid:
         from models.configs import get_version
 
         running_ver_info = get_version(running_vid)
+        health_data = check_health(version_id=running_vid)
 
     if request.headers.get("HX-Request"):
         # Return HTML for HTMX swap
@@ -82,10 +103,19 @@ def status():
             if running_ver_info:
                 safe_name = html_module.escape(running_ver_info["config_name"])
                 ver_label = f' <a href="{url_for("versions.edit", version_id=running_ver_info["id"])}">v{running_ver_info["version_number"]} ({safe_name})</a>'
+
+            # Health badge
+            health_badge = ""
+            if health_data:
+                if health_data["healthy"]:
+                    health_badge = f' <span class="health-ok">({health_data["response_time_ms"]}ms)</span>'
+                else:
+                    health_badge = ' <span class="health-fail">(Unresponsive)</span>'
+
             return (
                 f'<span class="status running" hx-get="{url_for("server.status")}" '
                 f'hx-trigger="every 10s" hx-swap="outerHTML">'
-                f"● Running{ver_label} "
+                f"● Running{ver_label}{health_badge} "
                 f'<button hx-post="{url_for("server.import_config")}" hx-target="#flash-area" '
                 f'class="btn btn-import">Import Config</button> '
                 f'<button hx-post="{url_for("server.stop")}" hx-target="#flash-area" '
@@ -93,7 +123,7 @@ def status():
             )
         else:
             return '<span class="status stopped">● Stopped</span>'
-    return jsonify(st)
+    return jsonify({**st, "health": health_data})
 
 
 @bp.route("/server/stop", methods=["POST"])
@@ -102,6 +132,13 @@ def stop():
     from services.screen_manager import stop
 
     result = stop()
+    if result["success"]:
+        try:
+            from models.usage import record_stop
+
+            record_stop(exit_reason="user_stopped")
+        except Exception:
+            logger.error("Failed to record stop", exc_info=True)
     if request.headers.get("HX-Request"):
         cls = "success" if result["success"] else "error"
         msg = (
@@ -117,14 +154,43 @@ def stop():
     return redirect(request.referrer or url_for("index"))
 
 
+@bp.route("/version/<int:version_id>/validate")
+def validate(version_id):
+    """GET — Validate a version's config before launch (JSON)."""
+    from services.config_validator import validate as validate_config
+
+    errors, warnings = validate_config(version_id)
+    return jsonify({
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+    })
+
+
 @bp.route("/server/start/<int:version_id>", methods=["POST"])
 @rate_limit(max_calls=1, period=30)
 def start(version_id):
+    from services.config_validator import validate as validate_config
     from services.screen_manager import start
     from services.command_builder import build_command
 
+    errors, warnings = validate_config(version_id)
+    if errors:
+        msg = "; ".join(e["message"] for e in errors)
+        if request.headers.get("HX-Request"):
+            return f'<div class="alert alert-error">Cannot start: {html_module.escape(msg)}</div>'
+        flash(f"Cannot start: {msg}", "error")
+        return redirect(request.referrer or url_for("index"))
+
     args = build_command(version_id)
     result = start(args, version_id=version_id)
+    if result["success"]:
+        try:
+            from models.usage import record_launch
+
+            record_launch(version_id)
+        except Exception:
+            logger.error("Failed to record launch", exc_info=True)
     if request.headers.get("HX-Request"):
         cls = "success" if result["success"] else "error"
         msg = (
@@ -132,9 +198,16 @@ def start(version_id):
             if result["success"]
             else html_module.escape(result["message"])
         )
-        return f'<div class="alert alert-{cls}">{msg}</div>'
+        resp = f'<div class="alert alert-{cls}">{msg}</div>'
+        if warnings and result["success"]:
+            warn_text = "; ".join(w["message"] for w in warnings)
+            resp += f'<div class="alert alert-warning">Warnings: {html_module.escape(warn_text)}</div>'
+        return resp
     if result["success"]:
         flash(f"Server started (v{version_id})", "success")
+        if warnings:
+            warn_text = "; ".join(w["message"] for w in warnings)
+            flash(f"Warnings: {warn_text}", "warning")
     else:
         flash(result["message"], "error")
     return redirect(request.referrer or url_for("index"))
@@ -228,6 +301,29 @@ def benchmark(version_id):
 
     result = benchmark_version(version_id)
     return jsonify(result)
+
+
+@bp.route("/usage-analytics")
+def usage_analytics():
+    """Dashboard page showing config usage statistics."""
+    from models.usage import get_usage_stats, get_recent_sessions, get_running_session_count
+
+    stats = get_usage_stats()
+    sessions = get_recent_sessions(50)
+    running_count = get_running_session_count()
+
+    # Compute totals
+    total_launches = sum(s["total_launches"] for s in stats)
+    total_configs = len(stats)
+
+    return render_template(
+        "usage_analytics/index.html",
+        stats=stats,
+        sessions=sessions,
+        running_count=running_count,
+        total_launches=total_launches,
+        total_configs=total_configs,
+    )
 
 
 @bp.route("/server/import-config", methods=["POST"])

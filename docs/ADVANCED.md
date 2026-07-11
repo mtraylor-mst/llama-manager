@@ -299,22 +299,7 @@ Characters that reset the DRY repetition counter. Common values include newline 
 
 ## Benchmarking
 
-`llama-manager` includes a built-in benchmarking tool to help you quantitatively compare different configurations.
-
-### How Benchmarking Works
-When you trigger a benchmark, the manager:
-1.  Sends a standardized test prompt to the currently running server.
-2.  Measures the time taken to generate a response.
-3.  Queries system tools (`nvidia-smi`, `psutil`) to capture resource usage.
-4.  Saves the results to the version's history.
-
-### Key Metrics Captured
-*   **TPS (Tokens Per Second)**: The most critical metric for speed. It represents how fast the model generates text.
-*   **VRAM Usage (MB)**: The total amount of GPU memory consumed by the model and the KV cache.
-*   **Peak CPU %**: The maximum CPU load detected during the generation process.
-*   **Duration**: The total wall-clock time for the benchmark request.
-
-**Pro-Tip**: Use benchmarking to find the "sweet spot" for `gpu_layers` and `context_size` where you maximize TPS without exceeding your available VRAM.
+For a complete guide to benchmarking — how it works, request details, metrics interpretation, and troubleshooting — see [Benchmarking Guide](BENCHMARKING.md).
 
 ---
 
@@ -545,7 +530,115 @@ Deletes a version and all its associated data. Cannot delete the currently runni
 
 Creates an exact copy of a version. Redirects to the edit form for the new version.
 
+#### Validate Config (Pre-Launch)
+`GET /version/<int:version_id>/validate`
+
+Validates a version's configuration before launch. Checks model file existence, VRAM fit estimates, and value sanity. Returns errors (which block launch) and warnings (advisory only).
+
+**Response Example:**
+```json
+{
+  "valid": true,
+  "errors": [],
+  "warnings": [
+    {
+      "field": "vram",
+      "message": "Low VRAM margin: estimated 7800 MB of 8192 MB (5% margin)"
+    }
+  ]
+}
+```
+
+#### Server Health Check
+`GET /server/health`
+
+Pings the llama-server HTTP API `/health` endpoint to confirm responsiveness. Returns health status and response time in milliseconds.
+
+**Response Example:**
+```json
+{
+  "healthy": true,
+  "response_time_ms": 2,
+  "status": "ok",
+  "error": null
+}
+```
+
+#### VRAM Safety Estimate
+`GET /version/<int:version_id>/vram-safety`
+
+Returns a theoretical VRAM usage estimate based on model metadata and configuration. Includes color-coded safety status (`green`, `yellow`, `red`) and margin percentage.
+
+**Response Example:**
+```json
+{
+  "status": "yellow",
+  "predicted_peak_mb": 7600,
+  "total_vram_mb": 8192,
+  "margin_pct": 7.2,
+  "model_weight_size_mb": 6200,
+  "kv_cache_mb": 1400
+}
+```
+
+#### Usage Analytics Dashboard
+`GET /usage-analytics`
+
+Returns the HTML dashboard page showing config usage statistics: launch frequency, average runtime, exit reasons, and recent session history.
+
+#### VRAM Stress Test — Start
+`POST /version/<int:version_id>/vram-stress-test`
+
+Starts a background stress test that performs binary search to find the maximum context size before OOM. Runs in a daemon thread.
+
+**Response Example:**
+```json
+{
+  "test_id": 5,
+  "version_id": 12,
+  "status": "running"
+}
+```
+
+#### VRAM Stress Test — Status
+`GET /vram-stress-test/<int:test_id>`
+
+Poll for stress test progress. Returns current phase, data points collected, and estimated results.
+
+**Response Example:**
+```json
+{
+  "test_id": 5,
+  "status": "running",
+  "phase": "binary_search",
+  "data_points": [
+    {"ctx_tokens": 4096, "vram_used_mb": 6200, "success": true},
+    {"ctx_tokens": 8192, "vram_used_mb": 7800, "success": true}
+  ]
+}
+```
+
+#### VRAM Stress Test — Latest
+`GET /version/<int:version_id>/vram-stress-test/latest`
+
+Returns the most recent stress test result for a version.
+
+#### VRAM Stress Test — Cancel
+`POST /vram-stress-test/<int:test_id>/cancel`
+
+Cancels a running stress test.
+
 ---
 
-### Authentication
-If `AUTH_ENABLED=true`, all endpoints require HTTP Basic Auth with the configured username and password. CSRF tokens are required for state-changing POST requests when accessed via browser sessions.
+### Authentication & Security
+
+#### HTTP Basic Auth
+If `AUTH_ENABLED=true`, all endpoints require HTTP Basic Auth with the configured username and password.
+
+#### CSRF Protection
+Flask-WTF CSRF protection is enabled on all state-changing POST requests when accessed via browser sessions. API clients making direct JSON requests should include the CSRF token in the `X-CSRFToken` header.
+
+#### Session Security
+- Session cookies are marked `HttpOnly` to prevent JavaScript access
+- `SameSite=Lax` is set to mitigate cross-site request forgery
+- `LLAMA_SECRET_KEY` generates a random value per process startup if not set

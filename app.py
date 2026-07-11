@@ -49,14 +49,21 @@ def create_app():
         st = get_status()
         running_vid = get_running_version_id() if st["running"] else None
         running_ver_info = None
+        health_data = None
         if running_vid:
             from models.configs import get_version
+            from services.server_health import check_health
 
             running_ver_info = get_version(running_vid)
+            try:
+                health_data = check_health(version_id=running_vid)
+            except Exception:
+                pass
         return {
             "server_status": st,
             "running_version_id": running_vid,
             "running_version_info": running_ver_info,
+            "health_data": health_data,
             "model_dir": MODEL_DIR,
         }
 

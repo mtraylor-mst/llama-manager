@@ -401,3 +401,35 @@ CREATE TABLE IF NOT EXISTS vram_stress_data_points (
     tps DECIMAL(8,2),
     FOREIGN KEY (stress_test_id) REFERENCES vram_stress_tests(id) ON DELETE CASCADE
 );
+
+-- Config Templates
+CREATE TABLE IF NOT EXISTS config_templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    source_version_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_version_id) REFERENCES config_versions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS template_variables (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    template_id INT NOT NULL,
+    variable_name VARCHAR(100) NOT NULL,
+    display_label VARCHAR(255),
+    default_value TEXT,
+    hint TEXT,
+    display_order INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (template_id) REFERENCES config_templates(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_template_var (template_id, variable_name)
+);
+
+-- Config Usage Analytics
+CREATE TABLE IF NOT EXISTS config_usage (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    version_id INT NOT NULL,
+    launched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    stopped_at TIMESTAMP NULL DEFAULT NULL,
+    exit_reason VARCHAR(50) DEFAULT NULL,
+    FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
+);

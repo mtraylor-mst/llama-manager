@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Config Templates{% endblock %}
+
+{% block content %}
+<h1>Config Templates</h1>
+
+<p class="meta">Templates let you reuse a config's settings across different models by parameterizing fields like model path, context size, and GPU layers.</p>
+
+<a href="{{ url_for('configs.templates') }}" class="btn">+ New Template</a>
+
+{% if not templates %}
+<p class="empty-state">No templates yet. Go to a version's edit page and click "Save as Template" to create one.</p>
+{% else %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Source</th>
+            <th>Variables</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in templates %}
+        <tr>
+            <td>
+                <a href="{{ url_for('configs.instantiate', template_id=t.id) }}">{{ t.name }}</a>
+                {% if t.description %}<br><small class="meta">{{ t.description }}</small>{% endif %}
+            </td>
+            <td>{{ t.source_config_name }} v{{ t.source_version_number }}</td>
+            <td>
+                {% if t.variables %}
+                {% for v in t.variables %}
+                <code>{{ v.variable_name }}</code>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% else %}
+                <span class="meta">None (static copy)</span>
+                {% endif %}
+            </td>
+            <td>
+                <form method="POST" action="{{ url_for('configs.delete_template', template_id=t.id) }}" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this template?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

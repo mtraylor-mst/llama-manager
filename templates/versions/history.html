@@ -24,6 +24,9 @@
             <td>{{ (v.comments or '')[:80] }}</td>
             <td class="actions">
                 <a href="{{ url_for('versions.edit', version_id=v.id) }}" class="btn">Edit</a>
+                {% if loop.index < loop.length %}
+                <a href="{{ url_for('versions.diff', version_id_1=v.id, version_id_2=versions[loop.index0 + 1].id) }}" class="btn" title="Diff with previous version">Diff</a>
+                {% endif %}
                 {% if v.id == running_version_id %}
                 <span class="status running" style="font-size:0.8rem">● Running</span>
                 {% elif server_status.running and v.id != latest_version_id %}
