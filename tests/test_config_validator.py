@@ -1,6 +1,5 @@
 """Tests for services/config_validator.py."""
 
-import os
 from unittest.mock import patch
 
 
