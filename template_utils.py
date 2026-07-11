@@ -271,6 +271,21 @@ COMPLEX_LABELS = {
     "dry_sequence_breakers": "DRY Sequence Breakers",
 }
 
+CATEGORY_LABELS = {
+    "model_loading": "Model Loading",
+    "context_batching": "Context & Batching",
+    "cpu_threading": "CPU / Threading",
+    "gpu_device": "GPU / Device",
+    "memory": "Memory",
+    "sampling": "Sampling",
+    "server": "Server",
+    "speculative": "Speculative Decoding",
+    "chat_templates": "Chat & Templates",
+    "checkpoints": "Checkpoints & Cache",
+    "logging": "Logging",
+    "advanced": "Advanced / Override",
+}
+
 COMPLEX_FIELDS = {
     "logit_biases": [("token_id", "Token ID", "int"), ("bias_value", "Bias", "float")],
     "lora_adapters": [("path", "Path", "text"), ("scale", "Scale", "float")],

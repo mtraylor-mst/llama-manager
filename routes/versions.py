@@ -9,6 +9,7 @@ from flask import (
     session,
 )
 from models.configs import duplicate_version, get_all_version_data
+from template_utils import CATEGORY_LABELS
 
 bp = Blueprint("versions", __name__)
 
@@ -24,29 +25,33 @@ def get_common_option_set():
         return set()
 
 
+def _resolve_option_label(opt):
+    """Resolve the display label for a common option."""
+    from template_utils import CATEGORY_FIELDS
+
+    fields = CATEGORY_FIELDS.get(opt["category"], [])
+    field_def = next((f for f in fields if f[0] == opt["column_name"]), None)
+    return opt["custom_label"] or (
+        field_def[1] if field_def else opt["column_name"]
+    )
+
+
+def _option_to_dict(opt):
+    """Convert a raw common option row to a template-ready dict."""
+    return {
+        "id": opt["id"],
+        "category": opt["category"],
+        "column_name": opt["column_name"],
+        "label": _resolve_option_label(opt),
+    }
+
+
 def get_common_options_list():
     """Return list of common option dicts with resolved labels."""
     try:
         from models.configs import get_common_options
-        from template_utils import CATEGORY_FIELDS
 
-        options = get_common_options()
-        result = []
-        for opt in options:
-            fields = CATEGORY_FIELDS.get(opt["category"], [])
-            field_def = next((f for f in fields if f[0] == opt["column_name"]), None)
-            label = opt["custom_label"] or (
-                field_def[1] if field_def else opt["column_name"]
-            )
-            result.append(
-                {
-                    "id": opt["id"],
-                    "category": opt["category"],
-                    "column_name": opt["column_name"],
-                    "label": label,
-                }
-            )
-        return result
+        return [_option_to_dict(opt) for opt in get_common_options()]
     except Exception:
         return []
 
@@ -55,27 +60,13 @@ def get_common_options_grouped():
     """Return common options grouped by category label."""
     try:
         from models.configs import get_common_options
-        from template_utils import CATEGORY_FIELDS
 
-        options = get_common_options()
         groups = {}
-        for opt in options:
+        for opt in get_common_options():
             cat_label = CATEGORY_LABELS.get(opt["category"], opt["category"])
             if cat_label not in groups:
                 groups[cat_label] = {"label": cat_label, "fields": []}
-            fields = CATEGORY_FIELDS.get(opt["category"], [])
-            field_def = next((f for f in fields if f[0] == opt["column_name"]), None)
-            label = opt["custom_label"] or (
-                field_def[1] if field_def else opt["column_name"]
-            )
-            groups[cat_label]["fields"].append(
-                {
-                    "id": opt["id"],
-                    "category": opt["category"],
-                    "column_name": opt["column_name"],
-                    "label": label,
-                }
-            )
+            groups[cat_label]["fields"].append(_option_to_dict(opt))
         return list(groups.values())
     except Exception:
         return []
@@ -382,17 +373,4 @@ _TRISTATE_COLS = {
     "checkpoints": {"kv_unified", "cache_idle_slots"},
 }
 
-CATEGORY_LABELS = {
-    "model_loading": "Model Loading",
-    "context_batching": "Context & Batching",
-    "cpu_threading": "CPU / Threading",
-    "gpu_device": "GPU / Device",
-    "memory": "Memory",
-    "sampling": "Sampling",
-    "server": "Server",
-    "speculative": "Speculative Decoding",
-    "chat_templates": "Chat & Templates",
-    "checkpoints": "Checkpoints & Cache",
-    "logging": "Logging",
-    "advanced": "Advanced / Override",
-}
+

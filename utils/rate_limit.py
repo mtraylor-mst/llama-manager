@@ -14,11 +14,14 @@ class RateLimiter:
         now = time.time()
         window_start = now - period
 
+        # Remove expired entries
+        if key in self._calls:
+            self._calls[key] = [t for t in self._calls[key] if t > window_start]
+            if not self._calls[key]:
+                del self._calls[key]
+
         if key not in self._calls:
             self._calls[key] = []
-
-        # Remove expired entries
-        self._calls[key] = [t for t in self._calls[key] if t > window_start]
 
         if len(self._calls[key]) >= max_calls:
             retry_after = self._calls[key][0] - window_start

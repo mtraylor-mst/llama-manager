@@ -1,4 +1,4 @@
-from services.command_builder import int_bool, neg_bool, float_fmt
+from services.command_builder import int_bool, float_fmt
 
 
 class TestIntBool:
@@ -13,17 +13,6 @@ class TestIntBool:
 
     def test_none(self):
         assert int_bool(None) is None
-
-
-class TestNegBool:
-    def test_true_becomes_one(self):
-        assert neg_bool(True) == 1
-
-    def test_false_becomes_zero(self):
-        assert neg_bool(False) == 0
-
-    def test_none_stays_none(self):
-        assert neg_bool(None) is None
 
 
 class TestFloatFmt:

@@ -5,15 +5,10 @@ def int_bool(v):
     return int(bool(v)) if v is not None else None
 
 
-def neg_bool(v):
-    return 1 if v else (0 if v is not None else None)
-
-
 def float_fmt(v):
     if v is None:
         return None
-    s = f"{v:f}".rstrip("0").rstrip(".")
-    return s if "." in s or v == int(v) else f"{v:.4f}"
+    return f"{v:f}".rstrip("0").rstrip(".")
 
 
 # Maps category -> flag definitions: (short_flag, long_flag, is_bool, format_func)
@@ -77,7 +72,7 @@ FLAG_DEFINITIONS = {
         ("-fa", "--flash-attn", False, None),
         ("--kv-offload/--no-kv-offload", "-kvo/-nkvo", True, None),
         ("--repack/--no-repack", "-nr", True, None),
-        ("--no-host", None, True, neg_bool),
+        ("--no-host", None, True, None),
         ("--fit", None, False, None),
         ("-fitt", "--fit-target", False, None),
         ("-fitc", "--fit-ctx", False, None),
@@ -468,25 +463,12 @@ NEGATIVE_BOOL_FIELDS = {
 
 def build_command(version_id):
     """Build the full llama-server command line from a version's data."""
-    from models.configs import get_all_version_data
+    from models.configs import CATEGORIES, get_all_version_data
 
     parts = [SERVER_BINARY]
     data = get_all_version_data(version_id)
 
-    for category in [
-        "model_loading",
-        "context_batching",
-        "cpu_threading",
-        "gpu_device",
-        "memory",
-        "sampling",
-        "server",
-        "speculative",
-        "chat_templates",
-        "checkpoints",
-        "logging",
-        "advanced",
-    ]:
+    for category in CATEGORIES:
         row = data.get(category, {})
         col_map = COLUMN_MAP.get(category, {})
         bools = BOOL_FIELDS.get(category, set())

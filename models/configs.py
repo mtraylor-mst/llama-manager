@@ -232,7 +232,6 @@ CATEGORY_COLUMNS = {
         "check_tensors",
         "image_min_tokens",
         "image_max_tokens",
-        "pooling_override",
     },
 }
 

@@ -11,8 +11,6 @@ def _parse_command_to_dict(args):
     while i < len(args):
         arg = args[i]
         if arg.startswith("-"):
-            if current_flag:
-                pass
             current_flag = arg
             if i + 1 < len(args) and not args[i + 1].startswith("-"):
                 result[current_flag] = args[i + 1]
@@ -20,8 +18,14 @@ def _parse_command_to_dict(args):
                 continue
             else:
                 result[current_flag] = True
-        elif current_flag:
-            result[current_flag] = str(result.get(current_flag, [])) + " " + arg
+        elif current_flag and current_flag in result:
+            existing = result[current_flag]
+            if existing is True:
+                result[current_flag] = arg
+            elif isinstance(existing, list):
+                existing.append(arg)
+            else:
+                result[current_flag] = [existing, arg]
         i += 1
     return result
 

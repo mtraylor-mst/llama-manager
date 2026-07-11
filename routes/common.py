@@ -36,7 +36,7 @@ def index():
                 "display_order": opt["display_order"],
             }
         )
-    from routes.versions import CATEGORY_LABELS
+    from template_utils import CATEGORY_LABELS
 
     return render_template(
         "common_options/index.html",
