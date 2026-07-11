@@ -5,6 +5,10 @@
 <h1>{% if is_fork %}New Version (Fork){% else %}Edit Version {{ version.version_number }}{% endif %}</h1>
 <p class="meta">Config: <a href="{{ url_for('configs.view', config_id=version.config_id) }}">{{ version.config_name }}</a></p>
 
+{% if not is_fork %}
+<p><a href="{{ url_for('configs.new_template', version_id=version.id) }}" class="btn btn-sm">Save as Template</a></p>
+{% endif %}
+
 {% if not is_fork and running_version and running_version.id != version.id %}
 <div class="running-banner">
     <span class="status running">● Running</span>

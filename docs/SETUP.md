@@ -70,6 +70,26 @@ mysql -h $HOST -u $USER -p llama_configs < schema.sql
 
 ---
 
+## .env File
+
+Create a `.env` file in the project root to persist your configuration without exporting variables in your shell. The application loads it automatically via `python-dotenv`:
+
+```ini
+LLAMA_DB_HOST=127.0.0.1
+LLAMA_DB_USER=your_db_user
+LLAMA_DB_PASS=your_db_password
+LLAMA_DB_NAME=llama_configs
+LLAMA_MODEL_DIR=/path/to/your/models/
+LLAMA_SERVER_BINARY=/usr/local/bin/llama-server
+LLAMA_SECRET_KEY=your-secret-key-here
+AUTH_ENABLED=false
+DEBUG=false
+```
+
+**Important**: Add `.env` to your `.gitignore` to avoid committing credentials. A `.gitignore` file is included in the repository.
+
+---
+
 ## Running the Application
 
 Once setup is complete, you can start the manager using:

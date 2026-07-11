@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Diff: v{{ diff.version_1.version_number }} vs v{{ diff.version_2.version_number }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Version Diff</h1>
+    <div>
+        <a href="{{ url_for('versions.edit', version_id=v1.id) }}" class="btn">Edit v{{ v1.version_number }}</a>
+        <a href="{{ url_for('versions.edit', version_id=v2.id) }}" class="btn">Edit v{{ v2.version_number }}</a>
+        <a href="{{ url_for('configs.view', config_id=v1.config_id) }}" class="btn">Back to Config</a>
+    </div>
+</div>
+
+<div class="diff-page-header">
+    <div class="diff-version-card">
+        <h3>v{{ diff.version_1.version_number }}</h3>
+        <p class="meta">{{ v1.created_at.strftime('%Y-%m-%d %H:%M') if v1.created_at else '' }}</p>
+        {% if v1.comments %}<p class="comments">{{ v1.comments[:120] }}</p>{% endif %}
+    </div>
+    <div class="diff-arrow">&rarr;</div>
+    <div class="diff-version-card">
+        <h3>v{{ diff.version_2.version_number }}</h3>
+        <p class="meta">{{ v2.created_at.strftime('%Y-%m-%d %H:%M') if v2.created_at else '' }}</p>
+        {% if v2.comments %}<p class="comments">{{ v2.comments[:120] }}</p>{% endif %}
+    </div>
+</div>
+
+{% set total_changes = diff.added|length + diff.removed|length + diff.changed|length %}
+
+{% if total_changes == 0 %}
+<div class="card">
+    <p class="empty">No differences — these versions produce identical commands.</p>
+</div>
+{% else %}
+
+<div class="diff-summary">
+    <span class="diff-count diff-added-count">{{ diff.added|length }} added</span>
+    <span class="diff-count diff-removed-count">{{ diff.removed|length }} removed</span>
+    <span class="diff-count diff-changed-count">{{ diff.changed|length }} changed</span>
+</div>
+
+<div class="diff-table-wrapper">
+<table class="diff-table">
+    <thead>
+        <tr>
+            <th class="diff-flag-col">Flag</th>
+            <th class="diff-value-col">v{{ diff.version_1.version_number }}</th>
+            <th class="diff-value-col">v{{ diff.version_2.version_number }}</th>
+        </tr>
+    </thead>
+    <tbody>
+
+    {% for item in diff.removed %}
+    <tr class="diff-row-removed">
+        <td class="diff-flag-cell"><code>{{ item.flag }}</code></td>
+        <td class="diff-value-cell diff-removed-cell">
+            {% if item.value is not none %}<span>{{ item.value }}</span>{% else %}<span class="meta">(enabled)</span>{% endif %}
+        </td>
+        <td class="diff-value-cell diff-empty-cell">&mdash;</td>
+    </tr>
+    {% endfor %}
+
+    {% for item in diff.added %}
+    <tr class="diff-row-added">
+        <td class="diff-flag-cell"><code>{{ item.flag }}</code></td>
+        <td class="diff-value-cell diff-empty-cell">&mdash;</td>
+        <td class="diff-value-cell diff-added-cell">
+            {% if item.value is not none %}<span>{{ item.value }}</span>{% else %}<span class="meta">(enabled)</span>{% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+
+    {% for item in diff.changed %}
+    <tr class="diff-row-changed">
+        <td class="diff-flag-cell"><code>{{ item.flag }}</code></td>
+        <td class="diff-value-cell diff-removed-cell">
+            {% if item.old_value is not none %}<span>{{ item.old_value }}</span>{% else %}<span class="meta">(enabled)</span>{% endif %}
+        </td>
+        <td class="diff-value-cell diff-added-cell">
+            {% if item.new_value is not none %}<span>{{ item.new_value }}</span>{% else %}<span class="meta">(enabled)</span>{% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+
+    </tbody>
+</table>
+</div>
+
+<details class="diff-full-cmd">
+    <summary>Full Commands</summary>
+    <div class="command-box"><input type="text" readonly value="{{ diff.command_1 }}" onclick="this.select()"></div>
+    <div class="command-box"><input type="text" readonly value="{{ diff.command_2 }}" onclick="this.select()"></div>
+</details>
+
+{% endif %}
+{% endblock %}

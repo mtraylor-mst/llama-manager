@@ -44,6 +44,8 @@ a:hover { color: var(--primary-hover); }
 .status.running a { color: var(--success); text-decoration: underline; }
 .status.running a:hover { color: #8ab876; }
 .status.stopped { background: #3d2d2d; color: var(--danger); }
+.health-ok { color: var(--success); font-size: 0.8rem; }
+.health-fail { color: var(--danger); font-size: 0.8rem; font-weight: bold; }
 
 /* Buttons */
 .btn {
@@ -522,6 +524,107 @@ a:hover { color: var(--primary-hover); }
 }
 .version-group-start td:first-child {
     font-weight: bold;
+}
+
+/* Diff page header */
+.diff-page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.diff-version-card {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem 1.5rem;
+}
+.diff-version-card h3 {
+    margin-bottom: 0.25rem;
+}
+.diff-arrow {
+    font-size: 1.5rem;
+    color: var(--text-dim);
+}
+
+/* Diff summary counts */
+.diff-summary {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+}
+.diff-count {
+    padding: 0.2rem 0.6rem;
+    border-radius: 3px;
+}
+.diff-added-count {
+    background: rgba(106, 153, 85, 0.15);
+    color: var(--success);
+}
+.diff-removed-count {
+    background: rgba(198, 120, 221, 0.15);
+    color: var(--danger);
+}
+.diff-changed-count {
+    background: rgba(229, 192, 123, 0.15);
+    color: var(--warning);
+}
+
+/* Diff table */
+.diff-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+.diff-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.diff-table th, .diff-table td {
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.diff-table th {
+    color: var(--text-dim);
+    font-weight: normal;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+.diff-flag-col { width: 200px; }
+.diff-value-col { flex: 1; }
+.diff-flag-cell code {
+    background: var(--bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    font-size: 0.85rem;
+}
+
+/* Diff row styles */
+.diff-row-removed td.diff-removed-cell {
+    background: rgba(198, 120, 221, 0.08);
+    color: var(--danger);
+}
+.diff-row-added td.diff-added-cell {
+    background: rgba(106, 153, 85, 0.08);
+    color: var(--success);
+}
+.diff-row-changed td.diff-removed-cell {
+    background: rgba(198, 120, 221, 0.05);
+    color: var(--danger);
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+.diff-row-changed td.diff-added-cell {
+    background: rgba(106, 153, 85, 0.05);
+    color: var(--success);
+    font-weight: bold;
+}
+.diff-empty-cell {
+    color: var(--text-dim);
+    opacity: 0.4;
 }
 
 /* Compare benchmarks page */

@@ -35,6 +35,34 @@ If you encounter `ImportError` or similar:
     ```
 *   **Benchmarking Errors**: The benchmark service requires `psutil` for CPU monitoring. If it's missing, install it via `pip install psutil`.
 
+### 5. Pre-Launch Validation Errors
+
+When you attempt to start a server, the validation layer checks configuration before launch:
+
+*   **Model file not found**: The `model_path` points to a file that doesn't exist on disk. Verify the path in your config matches the actual location of your `.gguf` file.
+*   **Draft model not found**: If speculative decoding is enabled, the draft model path must also exist.
+*   **VRAM insufficient warning**: The validator estimates VRAM usage and warns if margin is low. Reduce `gpu_layers`, `ctx_size`, or enable `flash_attn` to lower VRAM requirements.
+
+Validation warnings do not block launch — only hard errors (missing files, missing model source) prevent starting the server.
+
+### 6. Server Health Check Failures
+
+The nav bar displays health status as response time (e.g., `(2ms)`) or `Unresponsive`.
+
+*   **Shows "Unresponsive" but server is running**: The llama-server `/health` endpoint may not be available in older versions of llama.cpp. Ensure your binary supports the `/health` endpoint, or check that `host` and `port` in your config match where the server is actually listening.
+*   **High response time (>500ms)**: The server is under heavy load. Check system resources (CPU, VRAM) and consider reducing `n_parallel` or context size.
+
+### 7. VRAM Safety & Stress Test Issues
+
+*   **No safety estimate available**: Model metadata hasn't been cached yet. Launch the server once to populate `model_metadata`, then re-check.
+*   **Stress test fails immediately**: Ensure no llama-server is running — stress tests need exclusive access to launch/stop their own processes.
+*   **Stress test stuck on "running"**: The background thread may have encountered an error. Check `/tmp/llama-server-*.log` files for crash output. Use the cancel endpoint to clean up: `POST /vram-stress-test/<test_id>/cancel`.
+
+### 8. Usage Analytics
+
+*   **No data displayed**: Usage tracking records entries on server start/stop. If you haven't launched any servers through the manager yet, the dashboard will be empty.
+*   **Missing stop reasons**: If the manager process is killed (e.g., `SIGKILL`, system crash), open sessions won't have their `stopped_at` populated. They'll appear as still-running in the analytics.
+
 ---
 
 ## Maintenance

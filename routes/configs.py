@@ -149,3 +149,158 @@ def delete(config_id):
     delete_config(config_id)
     flash("Config deleted", "success")
     return redirect(url_for("index"))
+
+
+@bp.route("/templates")
+def templates():
+    """List all available templates."""
+    from models.templates import get_all_templates, get_template_variables
+
+    templates_list = []
+    for t in get_all_templates():
+        t["variables"] = get_template_variables(t["id"])
+        templates_list.append(t)
+
+    return render_template("templates/index.html", templates=templates_list)
+
+
+@bp.route("/version/<int:version_id>/template/new", methods=["GET", "POST"])
+def new_template(version_id):
+    """Create a template from an existing version."""
+    from models.configs import get_version
+    from models.templates import create_template, save_template_variables
+
+    version = get_version(version_id)
+    if not version:
+        flash("Version not found", "error")
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        if not name:
+            flash("Template name is required", "error")
+        else:
+            template_id = create_template(name, description, version_id)
+
+            # Process variables from form
+            variables = []
+            i = 0
+            while True:
+                var_name = request.form.get(f"var_{i}_name", "").strip()
+                if not var_name:
+                    break
+                variables.append({
+                    "variable_name": var_name,
+                    "display_label": request.form.get(f"var_{i}_label", "").strip(),
+                    "default_value": request.form.get(f"var_{i}_default", "").strip(),
+                    "hint": request.form.get(f"var_{i}_hint", "").strip(),
+                })
+                i += 1
+
+            save_template_variables(template_id, variables)
+            flash(f"Template '{name}' created", "success")
+            return redirect(url_for("configs.templates"))
+
+    # GET — pre-populate suggested variables
+    from models.configs import get_all_version_data
+
+    data = get_all_version_data(version_id)
+    suggested_vars = _get_suggested_variables(data)
+
+    return render_template(
+        "templates/new.html",
+        version=version,
+        suggested_vars=suggested_vars,
+    )
+
+
+@bp.route("/template/<int:template_id>/instantiate", methods=["GET", "POST"])
+def instantiate(template_id):
+    """Instantiate a new config from a template."""
+    from models.templates import get_template, get_template_variables, instantiate_template
+
+    template = get_template(template_id)
+    if not template:
+        flash("Template not found", "error")
+        return redirect(url_for("configs.templates"))
+
+    variables = get_template_variables(template_id)
+
+    if request.method == "POST":
+        config_name = request.form.get("config_name", "").strip()
+        if not config_name:
+            flash("Config name is required", "error")
+        else:
+            var_values = {}
+            for v in variables:
+                key = f"var_{v['variable_name']}"
+                val = request.form.get(key, v.get("default_value", "") or "").strip()
+                var_values[v["variable_name"]] = val
+
+            config_id, version_id = instantiate_template(
+                template_id, config_name, var_values
+            )
+            if config_id:
+                flash(f"Config '{config_name}' created from template", "success")
+                return redirect(url_for("versions.edit", version_id=version_id))
+            else:
+                flash("Failed to create config from template", "error")
+
+    return render_template(
+        "templates/instantiate.html",
+        template=template,
+        variables=variables,
+    )
+
+
+@bp.route("/template/<int:template_id>/delete", methods=["POST"])
+def delete_template(template_id):
+    """Delete a template."""
+    from models.templates import delete_template
+
+    if delete_template(template_id):
+        flash("Template deleted", "success")
+    else:
+        flash("Template not found", "error")
+    return redirect(url_for("configs.templates"))
+
+
+def _get_suggested_variables(data):
+    """Suggest fields that are good candidates for templating variables.
+
+    Returns list of dicts with 'variable_name', 'display_label', 'default_value'.
+    """
+    suggestions = []
+
+    # Model path is the most common variable
+    model_path = data.get("model_loading", {}).get("model_path", "")
+    if model_path:
+        suggestions.append({
+            "variable_name": "model_path",
+            "display_label": "Model Path",
+            "default_value": model_path,
+            "hint": "Path to the .gguf model file",
+        })
+
+    # Context size is commonly varied per model
+    ctx_size = data.get("context_batching", {}).get("ctx_size")
+    if ctx_size:
+        suggestions.append({
+            "variable_name": "ctx_size",
+            "display_label": "Context Size",
+            "default_value": str(ctx_size),
+            "hint": "Context window size in tokens",
+        })
+
+    # GPU layers
+    gpu_layers = data.get("gpu_device", {}).get("gpu_layers")
+    if gpu_layers:
+        suggestions.append({
+            "variable_name": "gpu_layers",
+            "display_label": "GPU Layers",
+            "default_value": str(gpu_layers),
+            "hint": "Number of layers to offload to GPU (-1 = all)",
+        })
+
+    return suggestions

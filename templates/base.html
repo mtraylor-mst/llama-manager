@@ -34,12 +34,14 @@
     <nav class="topnav">
         <a href="{{ url_for('index') }}" class="brand">llama.cpp Manager</a>
         <a href="{{ url_for('common.index') }}" class="nav-link">Common Options</a>
+        <a href="{{ url_for('configs.templates') }}" class="nav-link">Templates</a>
         <a href="{{ url_for('configs.compare_benchmarks') }}" class="nav-link">Compare Benchmarks</a>
         <a href="{{ url_for('server.vram_stress_test_page') }}" class="nav-link">VRAM Stress Test</a>
+        <a href="{{ url_for('server.usage_analytics') }}" class="nav-link">Usage Analytics</a>
         <div class="nav-right">
             {% if server_status.running %}
             <span class="status running" hx-get="{{ url_for('server.status') }}" hx-trigger="every 10s" hx-swap="outerHTML">
-                ● Running{% if running_version_info %} <a href="{{ url_for('versions.edit', version_id=running_version_info.id) }}">v{{ running_version_info.version_number }} ({{ running_version_info.config_name }})</a>{% endif %}
+                ● Running{% if running_version_info %} <a href="{{ url_for('versions.edit', version_id=running_version_info.id) }}">v{{ running_version_info.version_number }} ({{ running_version_info.config_name }})</a>{% endif %}{% if health_data %}{% if health_data.healthy %} <span class="health-ok">({{ health_data.response_time_ms }}ms)</span>{% else %} <span class="health-fail">(Unresponsive)</span>{% endif %}{% endif %}
                 <button hx-post="{{ url_for('server.import_config') }}" hx-target="#flash-area" class="btn btn-import">Import Config</button>
                 <button hx-post="{{ url_for('server.stop') }}" hx-target="#flash-area" class="btn btn-danger">Stop</button>
             </span>

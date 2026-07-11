@@ -71,3 +71,76 @@ To see exactly how two versions differ, use the command diff feature. It compare
 ### Common Options
 
 Frequently-used parameters can be pinned to a **common options** panel that appears at the top of every version edit form. Toggle fields in and out of common options, reorder them via drag-and-drop, and customize their display labels.
+
+---
+
+## 4. Pre-Launch Validation
+
+Before starting a server, you can validate a version's configuration to catch issues early:
+
+1.  **Navigate to a version**: Open the edit form for any version.
+2.  **Click Validate**: The system checks for missing model files, invalid parameter values, and VRAM fit estimates.
+3.  **Review results**: Hard errors (e.g., missing model file) block launch. Warnings (e.g., low VRAM margin) are advisory only.
+
+Validation runs automatically when you click **Start**, surfacing errors before the process is spawned.
+
+---
+
+## 5. Server Health Monitoring
+
+The nav bar displays real-time server health:
+
+*   **Response time badge**: When a server is running and healthy, the status shows response time (e.g., `Running (2ms)`).
+*   **Unresponsive indicator**: If the llama-server HTTP API doesn't respond within 1 second, the badge shows `(Unresponsive)`.
+*   **Dedicated health endpoint**: Visit `/server/health` for a JSON health report with detailed error information.
+
+---
+
+## 6. VRAM Safety Analysis
+
+Estimate whether your configuration will fit in available GPU memory before launching:
+
+1.  **Navigate to a version**: Open any version's view page.
+2.  **View VRAM safety**: The page displays a color-coded estimate:
+    *   **Green**: Comfortable margin — the config should run without OOM.
+    *   **Yellow**: Tight margin — consider reducing `gpu_layers` or `ctx_size`.
+    *   **Red**: Likely to exceed VRAM — adjust settings before launching.
+3.  **First launch required**: The estimate requires cached model metadata. Run a server once to populate it, then check again.
+
+---
+
+## 7. VRAM Stress Testing
+
+Find the maximum context size your hardware supports for a given configuration:
+
+1.  **Navigate to the stress test page**: Visit `/vram-stress-test`.
+2.  **Select a version**: Choose from versions marked as `working`.
+3.  **Start the test**: The system performs binary search, launching llama-server at increasing context sizes until OOM.
+4.  **Monitor progress**: Poll the test status to see phases (`initial_probe`, `binary_search`, `completed`) and data points.
+5.  **Review results**: Once complete, the test reports the maximum safe context size and VRAM usage curve.
+
+**Note**: Stress tests run in background threads and manage their own llama-server processes. Do not run other servers during a stress test.
+
+---
+
+## 8. Usage Analytics
+
+Track which configs are used most and how they perform over time:
+
+1.  **Navigate to analytics**: Visit `/usage-analytics`.
+2.  **Review stats**: See per-config launch counts, average runtime, unique versions launched, and exit reason breakdowns.
+3.  **Recent sessions**: View the 50 most recent launch/stop sessions with timestamps and exit reasons.
+
+Usage data is recorded automatically when you start or stop a server through the manager interface. Sessions are tracked in the `config_usage` table.
+
+---
+
+## 9. Config Templates
+
+Create reusable, parameterized presets from existing configurations:
+
+1.  **Create from version**: From any version, save it as a template.
+2.  **Define variables**: Mark fields (e.g., model path, context size) as templatable with `{{variable}}` placeholders.
+3.  **Instantiate**: Create new configs from a template by filling in variable values.
+
+Templates are stored in the `config_templates` and `template_variables` tables, and are useful for deploying similar configurations across multiple models.

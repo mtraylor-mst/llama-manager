@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Usage Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Usage Analytics</h1>
+    <a href="{{ url_for('index') }}" class="btn">Back to Home</a>
+</div>
+
+<!-- Summary Cards -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <div class="card">
+        <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">{{ total_launches }}</div>
+        <div style="color: var(--text-dim); font-size: 0.85rem;">Total Launches</div>
+    </div>
+    <div class="card">
+        <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">{{ total_configs }}</div>
+        <div style="color: var(--text-dim); font-size: 0.85rem;">Configs Launched</div>
+    </div>
+    <div class="card">
+        <div style="font-size: 2rem; font-weight: bold; color: {% if running_count > 0 %}var(--success){% else %}var(--text-dim){% endif %};">{{ running_count }}</div>
+        <div style="color: var(--text-dim); font-size: 0.85rem;">Untracked Sessions</div>
+    </div>
+</div>
+
+<!-- Config Stats Table -->
+{% if stats %}
+<div class="card">
+    <h3>Config Launch Statistics</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Config</th>
+                <th>Launches</th>
+                <th>Versions Used</th>
+                <th>Avg Runtime</th>
+                <th>Last Launched</th>
+                <th>Exit Reasons</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in stats %}
+            <tr>
+                <td><a href="{{ url_for('configs.view', config_id=s.config_id) }}">{{ s.config_name }}</a></td>
+                <td>{{ s.total_launches }}</td>
+                <td>{{ s.unique_versions }}</td>
+                <td>
+                    {% if s.avg_runtime_sec is not none %}
+                        {% if s.avg_runtime_sec >= 3600 %}
+                            {{ '%.1f'|format(s.avg_runtime_sec / 3600) }}h
+                        {% elif s.avg_runtime_sec >= 60 %}
+                            {{ '%.0f'|format(s.avg_runtime_sec / 60) }}m
+                        {% else %}
+                            {{ s.avg_runtime_sec }}s
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.last_launched_at %}
+                        {{ s.last_launched_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.exit_reasons %}
+                        {% for reason, cnt in s.exit_reasons.items() %}
+                            <span style="display:inline-block; padding: 0.1rem 0.4rem; background: var(--surface); border-radius: 3px; font-size: 0.8rem; margin: 0.1rem;">{{ reason }}: {{ cnt }}</span>
+                        {% endfor %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- Recent Sessions -->
+{% if sessions %}
+<div class="card" style="margin-top: 1.5rem;">
+    <h3>Recent Sessions</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Config</th>
+                <th>Version</th>
+                <th>Launched</th>
+                <th>Stopped</th>
+                <th>Duration</th>
+                <th>Exit Reason</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td><a href="{{ url_for('configs.view', config_id=s.config_id) }}">{{ s.config_name }}</a></td>
+                <td><a href="{{ url_for('versions.edit', version_id=s.version_id) }}">v{{ s.version_number }}</a></td>
+                <td>{{ s.launched_at.strftime('%Y-%m-%d %H:%M') if s.launched_at else '-' }}</td>
+                <td>
+                    {% if s.stopped_at %}
+                        {{ s.stopped_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                        <span class="status running" style="font-size:0.8rem;">Running</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.stopped_at and s.launched_at %}
+                        {% set diff = (s.stopped_at - s.launched_at).total_seconds() %}
+                        {% if diff >= 3600 %}
+                            {{ '%.1f'|format(diff / 3600) }}h
+                        {% elif diff >= 60 %}
+                            {{ '%.0f'|format(diff / 60) }}m
+                        {% else %}
+                            {{ '%.0f'|format(diff) }}s
+                        {% endif %}
+                    {% elif not s.stopped_at and s.launched_at %}
+                        Running...
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.exit_reason %}
+                        {{ s.exit_reason }}
+                    {% elif not s.stopped_at %}
+                        <span style="color: var(--success);">active</span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if not stats and not sessions %}
+<p class="empty">No usage data yet. Launch and stop servers to start tracking.</p>
+{% endif %}
+{% endblock %}

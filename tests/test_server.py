@@ -43,9 +43,16 @@ class TestStatus:
                 "version_number": 1,
                 "config_name": "Test",
             }
-            resp = client.get("/server/status", headers={"HX-Request": "true"})
-            assert resp.status_code == 200
-            assert b"Running" in resp.data
+            with patch("services.server_health.check_health") as mock_health:
+                mock_health.return_value = {
+                    "healthy": True,
+                    "response_time_ms": 5,
+                    "status": "ok",
+                    "error": None,
+                }
+                resp = client.get("/server/status", headers={"HX-Request": "true"})
+                assert resp.status_code == 200
+                assert b"Running" in resp.data
 
 
 class TestStop:
@@ -84,7 +91,9 @@ class TestStart:
     @patch("utils.rate_limit._limiter.is_allowed", return_value=(True, 0))
     @patch("services.screen_manager.start")
     @patch("services.command_builder.build_command")
-    def test_start_success_htmx(self, mock_build, mock_start, mock_rate, client):
+    @patch("services.config_validator.validate")
+    def test_start_success_htmx(self, mock_val, mock_build, mock_start, mock_rate, client):
+        mock_val.return_value = ([], [])
         mock_build.return_value = ["llama-server", "-m", "model.bin"]
         mock_start.return_value = {"success": True, "message": "Server started"}
         resp = client.post("/server/start/1", headers={"HX-Request": "true"})
@@ -96,7 +105,9 @@ class TestStart:
     @patch("utils.rate_limit._limiter.is_allowed", return_value=(True, 0))
     @patch("services.screen_manager.start")
     @patch("services.command_builder.build_command")
-    def test_start_failure_htmx(self, mock_build, mock_start, mock_rate, client):
+    @patch("services.config_validator.validate")
+    def test_start_failure_htmx(self, mock_val, mock_build, mock_start, mock_rate, client):
+        mock_val.return_value = ([], [])
         mock_build.return_value = ["llama-server", "-m", "model.bin"]
         mock_start.return_value = {"success": False, "message": "Already running"}
         resp = client.post("/server/start/1", headers={"HX-Request": "true"})
@@ -106,7 +117,9 @@ class TestStart:
     @patch("utils.rate_limit._limiter.is_allowed", return_value=(True, 0))
     @patch("services.screen_manager.start")
     @patch("services.command_builder.build_command")
-    def test_start_success_redirect(self, mock_build, mock_start, mock_rate, client):
+    @patch("services.config_validator.validate")
+    def test_start_success_redirect(self, mock_val, mock_build, mock_start, mock_rate, client):
+        mock_val.return_value = ([], [])
         mock_build.return_value = ["llama-server", "-m", "model.bin"]
         mock_start.return_value = {"success": True, "message": "Server started"}
         resp = client.post("/server/start/1", follow_redirects=False)

@@ -147,6 +147,27 @@ def fork_edit(version_id):
     return _edit_form(fake_version, None, data=source_data, is_fork=True)
 
 
+@bp.route("/version/<int:version_id_1>/diff/<int:version_id_2>")
+def diff(version_id_1, version_id_2):
+    """Full-page visual diff between two versions."""
+    from models.configs import get_version
+    from services.command_diff import diff_commands
+
+    v1 = get_version(version_id_1)
+    v2 = get_version(version_id_2)
+    if not v1 or not v2:
+        flash("One or both versions not found", "error")
+        return redirect(url_for("index"))
+
+    result = diff_commands(version_id_1, version_id_2)
+    return render_template(
+        "versions/diff.html",
+        diff=result,
+        v1=v1,
+        v2=v2,
+    )
+
+
 @bp.route("/version/<int:version_id>/delete", methods=["POST"])
 def delete(version_id):
     from models.configs import get_version, delete_version

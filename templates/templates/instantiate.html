@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Instantiate {{ template.name }}{% endblock %}
+
+{% block content %}
+<h1>Instantiate Template</h1>
+<p class="meta">{{ template.name }}{% if template.description %} — {{ template.description }}{% endif %}</p>
+<p class="meta">Source: {{ template.source_config_name }} v{{ template.source_version_number }}</p>
+
+<form method="POST" class="form-panel">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+        <label>Config Name</label>
+        <input type="text" name="config_name" value="{{ template.name }}" required placeholder="Name for the new config">
+    </div>
+
+    {% if variables %}
+    <fieldset class="form-section">
+        <legend>Template Variables</legend>
+
+        {% for v in variables %}
+        <div class="form-group">
+            <label>{{ v.display_label or v.variable_name }}</label>
+            <input type="text" name="var_{{ v.variable_name }}" value="{{ v.default_value or '' }}" placeholder="{{ v.hint or v.variable_name }}">
+            {% if v.hint %}<small class="meta">{{ v.hint }}</small>{% endif %}
+        </div>
+        {% endfor %}
+    </fieldset>
+    {% else %}
+    <p class="meta">This template has no variables — it will create an exact copy of the source version's settings.</p>
+    {% endif %}
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create Config</button>
+        <a href="{{ url_for('configs.templates') }}" class="btn">Cancel</a>
+    </div>
+</form>
+{% endblock %}
