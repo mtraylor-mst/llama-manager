@@ -183,10 +183,36 @@ class TestCompareSignatures:
 
     @patch("models.configs.get_category")
     @patch("models.configs.CATEGORIES", ["model_loading", "context_batching"])
-    def test_skips_none_and_zero_values(self, mock_get_category):
+    def test_zero_values_are_compared(self, mock_get_category):
         mock_get_category.return_value = {
             "model_path": "/models/test.gguf",
             "ctx_size": 2048,
+        }
+        signature = {
+            "model_path": "/models/test.gguf",
+            "ctx_size": 0,
+        }
+        result = _compare_signatures(signature, 1)
+        assert result is False
+
+    @patch("models.configs.get_category")
+    @patch("models.configs.CATEGORIES", ["model_loading"])
+    def test_numeric_comparison(self, mock_get_category):
+        mock_get_category.return_value = {
+            "model_path": "/models/test.gguf",
+        }
+        signature = {
+            "model_path": "/models/test.gguf",
+        }
+        result = _compare_signatures(signature, 1)
+        assert result is True
+
+    @patch("models.configs.get_category")
+    @patch("models.configs.CATEGORIES", ["model_loading"])
+    def test_zero_matches_zero(self, mock_get_category):
+        mock_get_category.return_value = {
+            "model_path": "/models/test.gguf",
+            "ctx_size": 0,
         }
         signature = {
             "model_path": "/models/test.gguf",
@@ -197,12 +223,14 @@ class TestCompareSignatures:
 
     @patch("models.configs.get_category")
     @patch("models.configs.CATEGORIES", ["model_loading"])
-    def test_numeric_comparison(self, mock_get_category):
+    def test_none_and_empty_skipped(self, mock_get_category):
         mock_get_category.return_value = {
             "model_path": "/models/test.gguf",
         }
         signature = {
             "model_path": "/models/test.gguf",
+            "some_field": None,
+            "another_field": "",
         }
         result = _compare_signatures(signature, 1)
         assert result is True

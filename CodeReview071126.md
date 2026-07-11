@@ -10,7 +10,7 @@
 
 - [x] **`app.py:45-61`** — ~~`inject_context` runs expensive process discovery...~~ **Fixed.** Added `_find_running_cached()` with 2s TTL in `screen_manager.py`. Cache invalidated on start/stop. Both `get_status()` and `get_running_version_id()` use the cached path.
 - [x] ~~Running-version detection logic duplicated across 3 files...~~ **Fixed.** Added `get_running_for_config(config_id, versions)` in `screen_manager.py`. Updated all 3 call sites in `configs.py` and `versions.py` to use it.
-- [ ] **`services/config_importer.py:559-561`** — `_compare_signatures` skips `val == 0`, causing false signature matches (e.g., `mirostat=0` matches `mirostat=2`).
+- [x] **`services/config_importer.py:559-561`** — ~~`_compare_signatures` skips `val == 0`...~~ **Fixed.** Removed `val == 0` from skip condition. Added tests for zero-vs-nonzero mismatch, zero-vs-zero match, and None/empty skipping.
 - [ ] **`services/command_builder.py:476-489`** — Hardcoded category list instead of importing shared `CATEGORIES` constant.
 - [ ] **`services/command_diff.py:15`** — Dead code (`pass`) and buggy multi-value flag concatenation in `_parse_command_to_dict`.
 - [ ] **`services/command_builder.py:12-16`** — `float_fmt` has confusing/unreachable logic producing `"0.0000"` for integer inputs.

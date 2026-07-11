@@ -557,7 +557,7 @@ def _compare_signatures(signature, version_id):
             return str(a) == str(b)
 
     for col, val in signature.items():
-        if val is None or val == 0 or val == "":
+        if val is None or val == "":
             continue
         cat = next((c for c in CATEGORIES if (c, col) in FLAG_TO_COLUMN.values()), None)
         if not cat:
