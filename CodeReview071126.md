@@ -4,12 +4,12 @@
 
 - [x] **`models/base.py:57-62`** — ~~`PooledConnection.__exit__` auto-commits/rollbacks...~~ **Fixed.** Removed implicit commit/rollback from `__exit__`; all callers already manage their own transaction lifecycle.
 - [x] **`routes/versions.py:252-341`** — ~~`_edit_form` is a 90-line god function...~~ **Fixed.** Extracted `copy_version_data()` into `models/configs.py`. Fork path in `_edit_form` now delegates to `duplicate_version()` + `_save_version_data()`, eliminating 36 lines of duplicated SQL. Moved `duplicate_version`/`get_all_version_data` to module-level imports for testability.
-- [ ] **`routes/versions.py:182-249`** — `_save_version_data` (68 lines) mixes metadata updates, form parsing, type conversion, and complex table assembly. Split into focused helpers.
+- [x] **`routes/versions.py:182-249`** — ~~`_save_version_data` (68 lines) mixed concerns...~~ **Fixed.** Extracted four focused helpers: `_update_version_metadata()`, `_convert_field_value()`, `_parse_category_data()`, `_parse_complex_table_rows()`. The orchestrator `_save_version_data` is now 15 lines.
 
 ## Medium Severity
 
-- [ ] **`app.py:45-61`** — `inject_context` runs expensive process discovery (`lsof`, `pgrep`) on every request. Add a 2-3s TTL cache.
-- [ ] Running-version detection logic duplicated across 3 files (`configs.py`, `versions.py` x2). Consolidate into `services/screen_manager.py`.
+- [x] **`app.py:45-61`** — ~~`inject_context` runs expensive process discovery...~~ **Fixed.** Added `_find_running_cached()` with 2s TTL in `screen_manager.py`. Cache invalidated on start/stop. Both `get_status()` and `get_running_version_id()` use the cached path.
+- [x] ~~Running-version detection logic duplicated across 3 files...~~ **Fixed.** Added `get_running_for_config(config_id, versions)` in `screen_manager.py`. Updated all 3 call sites in `configs.py` and `versions.py` to use it.
 - [ ] **`services/config_importer.py:559-561`** — `_compare_signatures` skips `val == 0`, causing false signature matches (e.g., `mirostat=0` matches `mirostat=2`).
 - [ ] **`services/command_builder.py:476-489`** — Hardcoded category list instead of importing shared `CATEGORIES` constant.
 - [ ] **`services/command_diff.py:15`** — Dead code (`pass`) and buggy multi-value flag concatenation in `_parse_command_to_dict`.

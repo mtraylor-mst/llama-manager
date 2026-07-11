@@ -1,8 +1,17 @@
 import os
 import signal
 import subprocess
+import time
 
 _PID_FILE = "/tmp/.llama-manager.pid"
+_STATUS_CACHE = {"value": None, "timestamp": 0}
+_STATUS_TTL = 2
+
+
+def _invalidate_status_cache():
+    """Clear the status cache (call after start/stop)."""
+    _STATUS_CACHE["value"] = None
+    _STATUS_CACHE["timestamp"] = 0
 
 
 def _write_pid(pid, version_id=None):
@@ -156,9 +165,20 @@ def _find_running():
     return None, None
 
 
+def _find_running_cached():
+    """Find running server with TTL cache to avoid expensive I/O on every request."""
+    now = time.time()
+    if now - _STATUS_CACHE["timestamp"] < _STATUS_TTL:
+        return _STATUS_CACHE["value"]
+    result = _find_running()
+    _STATUS_CACHE["value"] = result
+    _STATUS_CACHE["timestamp"] = now
+    return result
+
+
 def get_running_version_id():
     """Get the version_id of the currently running server."""
-    _, vid = _find_running()
+    _, vid = _find_running_cached()
     return vid
 
 
@@ -169,7 +189,7 @@ def is_running():
 
 def get_status():
     """Get detailed status of the running server."""
-    pid, vid = _find_running()
+    pid, vid = _find_running_cached()
     if pid:
         return {
             "running": True,
@@ -178,6 +198,36 @@ def get_status():
             "line": "",
         }
     return {"running": False, "state": "stopped", "name": None, "line": ""}
+
+
+def get_running_for_config(config_id, versions=None):
+    """Check if a version of config_id is currently running.
+
+    Args:
+        config_id: The config to check against.
+        versions: Optional pre-fetched list of version dicts for this config.
+                  If provided, returns the matching dict from that list.
+
+    Returns:
+        Tuple of (running_vid, running_version, is_this_config).
+        running_version is None if not from this config.
+    """
+    running_vid = get_running_version_id()
+    if not running_vid:
+        return None, None, False
+
+    if versions:
+        for v in versions:
+            if v["id"] == running_vid:
+                return running_vid, v, True
+        return running_vid, None, False
+
+    # No pre-fetched list — check by loading the running version
+    from models.configs import get_version
+
+    ver = get_version(running_vid)
+    is_this = ver and ver["config_id"] == config_id
+    return running_vid, ver if is_this else None, is_this
 
 
 def stop():
@@ -197,13 +247,16 @@ def stop():
                 os.kill(pid, 0)
             except ProcessLookupError:
                 _cleanup_pid()
+                _invalidate_status_cache()
                 return {"success": True, "message": f"Server (PID {pid}) stopped"}
         # Force kill if still running
         os.kill(pid, signal.SIGKILL)
         _cleanup_pid()
+        _invalidate_status_cache()
         return {"success": True, "message": f"Server (PID {pid}) killed"}
     except ProcessLookupError:
         _cleanup_pid()
+        _invalidate_status_cache()
         return {"success": True, "message": "Server already stopped"}
     except Exception as e:
         return {"success": False, "message": f"Failed to stop: {e}"}
@@ -231,6 +284,7 @@ def start(args, version_id=None):
                 start_new_session=True,
             )
         _write_pid(proc.pid, version_id)
+        _invalidate_status_cache()
         return {"success": True, "message": f"Started (PID {proc.pid})"}
     except Exception as e:
         return {"success": False, "message": f"Failed to start: {e}"}
