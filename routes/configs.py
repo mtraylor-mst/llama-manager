@@ -31,7 +31,6 @@ def view(config_id):
         get_latest_version,
         get_all_versions,
         get_performance_metrics,
-        get_version,
     )
 
     config = get_config(config_id)
@@ -43,18 +42,11 @@ def view(config_id):
     versions = get_all_versions(config_id)
 
     # Check if any version of this config is currently running
-    from services.screen_manager import get_running_version_id
+    from services.screen_manager import get_running_for_config
 
-    running_vid = get_running_version_id()
-    running_is_this_config = False
-    running_version = None
-    if running_vid:
-        for v in versions:
-            vid = v["id"] if isinstance(v, dict) else v[0]
-            if vid == running_vid:
-                running_is_this_config = True
-                running_version = get_version(running_vid)
-                break
+    running_vid, running_version, running_is_this_config = get_running_for_config(
+        config_id, versions
+    )
 
     # Show the running version in the main card if it's from this config, otherwise latest
     featured = running_version if running_is_this_config else latest

@@ -214,3 +214,139 @@ class TestSizeParsing:
 
         result = parse_log(str(log_file))
         assert result["file_size_bytes"] == int(1024 * 1024)
+
+
+class TestParseSizeToBytes:
+    def test_gib(self):
+        from services.model_parser import _parse_size_to_bytes
+
+        assert _parse_size_to_bytes("1.5", "GiB") == int(1.5 * (1024 ** 3))
+
+    def test_mib(self):
+        from services.model_parser import _parse_size_to_bytes
+
+        assert _parse_size_to_bytes("256", "MiB") == 256 * (1024 ** 2)
+
+    def test_kib(self):
+        from services.model_parser import _parse_size_to_bytes
+
+        assert _parse_size_to_bytes("1024", "KiB") == 1024 * 1024
+
+    def test_bytes(self):
+        from services.model_parser import _parse_size_to_bytes
+
+        assert _parse_size_to_bytes("512", "B") == 512
+
+    def test_unknown_unit_defaults_to_1(self):
+        from services.model_parser import _parse_size_to_bytes
+
+        assert _parse_size_to_bytes("100", "XB") == 100
+
+
+class TestGetCtxFromLog:
+    def test_extract_ctx_from_log(self, tmp_path):
+        from services.model_parser import _get_ctx_from_log
+
+        log_file = tmp_path / "test.log"
+        log_file.write_text(SAMPLE_LOG)
+
+        result = _get_ctx_from_log(str(log_file))
+        assert result == 32768
+
+    def test_no_ctx_in_log(self, tmp_path):
+        from services.model_parser import _get_ctx_from_log
+
+        log_file = tmp_path / "test.log"
+        log_file.write_text("print_info: n_layer = 32\n")
+
+        result = _get_ctx_from_log(str(log_file))
+        assert result is None
+
+
+class TestMemoryBreakdownDerivedFields:
+    def test_ctx_per_token_mb_calculated(self, tmp_path):
+        from services.model_parser import parse_memory_breakdown
+
+        log_content = (
+            "print_info: n_ctx = 4096\n"
+            "common_memory_breakdown_print: | info | 24124 = 23259 + "
+            "(20791 = 15345 + 4096 + 495 + 0) + rest\n"
+        )
+        log_file = tmp_path / "test.log"
+        log_file.write_text(log_content)
+
+        result = parse_memory_breakdown(str(log_file))
+
+        assert result is not None
+        assert result["ctx_per_token_mb"] is not None
+        assert abs(result["ctx_per_token_mb"] - (4096 / 4096)) < 0.01
+
+    def test_est_max_ctx_tokens_calculated(self, tmp_path):
+        from services.model_parser import parse_memory_breakdown
+
+        log_content = (
+            "print_info: n_ctx = 4096\n"
+            "common_memory_breakdown_print: | info | 24124 = 23259 + "
+            "(20791 = 15345 + 4096 + 495 + 0) + rest\n"
+        )
+        log_file = tmp_path / "test.log"
+        log_file.write_text(log_content)
+
+        result = parse_memory_breakdown(str(log_file))
+
+        assert result is not None
+        assert result["est_max_ctx_tokens"] is not None
+        # free_mb / ctx_per_token_mb = 23259 / 1.0 = 23259
+        assert result["est_max_ctx_tokens"] == 23259
+
+    def test_zero_context_gives_none_derived(self, tmp_path):
+        from services.model_parser import parse_memory_breakdown
+
+        log_content = (
+            "print_info: n_ctx = 4096\n"
+            "common_memory_breakdown_print: | info | 24124 = 23259 + "
+            "(20791 = 15345 + 0 + 495 + 0) + rest\n"
+        )
+        log_file = tmp_path / "test.log"
+        log_file.write_text(log_content)
+
+        result = parse_memory_breakdown(str(log_file))
+
+        assert result is not None
+        assert result["ctx_per_token_mb"] is None
+        assert result["est_max_ctx_tokens"] is None
+
+
+class TestRegexEdgeCases:
+    def test_print_info_extra_whitespace(self, tmp_path):
+        from services.model_parser import parse_log
+
+        log_content = "   print_info:  n_layer     =  64\n"
+        log_file = tmp_path / "test.log"
+        log_file.write_text(log_content)
+
+        result = parse_log(str(log_file))
+        assert result["n_layers"] == 64
+
+    def test_print_info_string_value(self, tmp_path):
+        from services.model_parser import parse_log
+
+        log_content = "print_info: architecture = llama\n"
+        log_file = tmp_path / "test.log"
+        log_file.write_text(log_content)
+
+        result = parse_log(str(log_file))
+        assert result["architecture"] == "llama"
+
+    def test_file_size_with_bpw_parenthesis(self, tmp_path):
+        from services.model_parser import parse_log
+
+        log_content = (
+            "print_info: n_layer = 32\n"
+            "file size   = 15.65 GiB (5.00 BPW)\n"
+        )
+        log_file = tmp_path / "test.log"
+        log_file.write_text(log_content)
+
+        result = parse_log(str(log_file))
+        assert result["file_size_bytes"] == int(15.65 * (1024 ** 3))

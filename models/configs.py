@@ -232,7 +232,6 @@ CATEGORY_COLUMNS = {
         "check_tensors",
         "image_min_tokens",
         "image_max_tokens",
-        "pooling_override",
     },
 }
 
@@ -354,17 +353,15 @@ def create_version(config_id, comments=""):
             return cur.lastrowid
 
 
-def duplicate_version(source_version_id, config_id, comments=""):
-    """Copy all category data from source version to a new version."""
-    version_id = create_version(config_id, comments)
-
+def copy_version_data(source_version_id, target_version_id):
+    """Copy all category and complex table data from source to target version."""
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # Copy each category table
             for cat in CATEGORIES:
                 table = f"v_{cat}"
                 cur.execute(
-                    f"SELECT * FROM {table} WHERE version_id = %s", (source_version_id,)
+                    f"SELECT * FROM {table} WHERE version_id = %s",
+                    (source_version_id,),
                 )
                 row = cur.fetchone()
                 if row:
@@ -372,15 +369,16 @@ def duplicate_version(source_version_id, config_id, comments=""):
                     cols = ", ".join(row.keys())
                     placeholders = ", ".join(["%s"] * len(row))
                     cur.execute(
-                        f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
-                        (version_id,) + tuple(row.values()),
+                        f"INSERT INTO {table} (version_id, {cols}) "
+                        f"VALUES (%s, {placeholders})",
+                        (target_version_id,) + tuple(row.values()),
                     )
 
-            # Copy complex tables
             for tbl in COMPLEX_TABLES:
                 table = f"v_{tbl}"
                 cur.execute(
-                    f"SELECT * FROM {table} WHERE version_id = %s", (source_version_id,)
+                    f"SELECT * FROM {table} WHERE version_id = %s",
+                    (source_version_id,),
                 )
                 rows = cur.fetchall()
                 for row in rows:
@@ -389,12 +387,18 @@ def duplicate_version(source_version_id, config_id, comments=""):
                     cols = ", ".join(row.keys())
                     placeholders = ", ".join(["%s"] * len(row))
                     cur.execute(
-                        f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
-                        (version_id,) + tuple(row.values()),
+                        f"INSERT INTO {table} (version_id, {cols}) "
+                        f"VALUES (%s, {placeholders})",
+                        (target_version_id,) + tuple(row.values()),
                     )
 
             conn.commit()
 
+
+def duplicate_version(source_version_id, config_id, comments=""):
+    """Copy all category data from source version to a new version."""
+    version_id = create_version(config_id, comments)
+    copy_version_data(source_version_id, version_id)
     return version_id
 
 

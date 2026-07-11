@@ -123,7 +123,7 @@ class TestEditLatest:
 
     @patch("models.configs.get_all_versions")
     @patch("services.screen_manager.get_running_version_id")
-    @patch("models.configs.get_all_version_data")
+    @patch("routes.versions.get_all_version_data")
     @patch("models.configs.get_latest_version")
     @patch("models.configs.get_config")
     def test_edit_latest_success(
@@ -147,7 +147,7 @@ class TestEdit:
 
     @patch("models.configs.get_all_versions")
     @patch("services.screen_manager.get_running_version_id")
-    @patch("models.configs.get_all_version_data")
+    @patch("routes.versions.get_all_version_data")
     @patch("models.configs.get_version")
     def test_edit_success(
         self, mock_version, mock_data, mock_running, mock_versions, client
@@ -169,7 +169,7 @@ class TestForkEdit:
 
     @patch("models.configs.get_all_versions")
     @patch("services.screen_manager.get_running_version_id")
-    @patch("models.configs.get_all_version_data")
+    @patch("routes.versions.get_all_version_data")
     @patch("models.configs.get_version")
     def test_fork_edit_success(
         self, mock_version, mock_data, mock_running, mock_versions, client
@@ -349,23 +349,21 @@ class TestCommonOptionsHelpers:
 class TestEditFormPostFork:
     @patch("models.configs.save_complex_table")
     @patch("models.configs.save_category")
-    @patch("models.configs.create_version")
-    @patch("models.configs.get_all_version_data")
+    @patch("routes.versions.duplicate_version", return_value=99)
+    @patch("routes.versions.get_all_version_data", return_value={})
     @patch("models.base.get_conn")
     @patch("models.configs.get_version")
     def test_fork_post_creates_new_version(
         self,
         mock_version,
         mock_get_conn,
-        mock_data,
-        mock_create_ver,
+        mock_get_data,
+        mock_dup_ver,
         mock_save_cat,
         mock_save_complex,
         client,
     ):
         mock_version.return_value = _make_version(1)
-        mock_data.return_value = _make_version_data()
-        mock_create_ver.return_value = 99
         mock_conn = MagicMock()
         mock_conn.return_value.__enter__.return_value = mock_conn.return_value
         mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
@@ -378,7 +376,7 @@ class TestEditFormPostFork:
         )
         assert resp.status_code == 302
         assert "config/1" in resp.location
-        mock_create_ver.assert_called_once()
+        mock_dup_ver.assert_called_once()
 
 
 class TestSaveVersionData:

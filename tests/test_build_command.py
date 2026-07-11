@@ -77,6 +77,40 @@ class TestBuildCommand:
         assert "--no-mmap" in cmd
 
     @patch("models.configs.get_all_version_data")
+    def test_mmproj_auto_disabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            model_loading={"mmproj_auto": 0},
+        )
+        cmd = build_command(1)
+        assert "--no-mmproj" in cmd
+        assert "--mmproj-auto" not in cmd
+        assert "--mmproj-auto/--no-mmproj" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_mmproj_auto_enabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            model_loading={"mmproj_auto": 1},
+        )
+        cmd = build_command(1)
+        assert "--mmproj-auto" in cmd
+        assert "--no-mmproj" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_mmproj_offload_disabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            model_loading={"mmproj_offload": 0},
+        )
+        cmd = build_command(1)
+        assert "--no-mmproj-offload" in cmd
+        assert "--mmproj-offload" not in cmd
+
+    @patch("models.configs.get_all_version_data")
     def test_prefill_assistant_disabled(self, mock_data):
         from services.command_builder import build_command
 
@@ -513,6 +547,17 @@ class TestBuildCommandComplexTables:
         cmd = build_command(1)
         assert "--spec-draft-n-max" in cmd
         assert "16" in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_spec_type(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={"spec_type": "draft-mtp"}
+        )
+        cmd = build_command(1)
+        assert "--spec-type" in cmd
+        assert "draft-mtp" in cmd
 
 
 class TestGetModelsInDir:

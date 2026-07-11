@@ -219,8 +219,12 @@ class TestFindRunning:
 class TestGetRunningVersionId:
     @patch("services.screen_manager._find_running")
     def test_get_running_version_id(self, mock_find):
-        from services.screen_manager import get_running_version_id
+        from services.screen_manager import (
+            _invalidate_status_cache,
+            get_running_version_id,
+        )
 
+        _invalidate_status_cache()
         mock_find.return_value = (1234, 5)
         result = get_running_version_id()
         assert result == 5
@@ -247,8 +251,12 @@ class TestIsRunning:
 class TestGetStatus:
     @patch("services.screen_manager._find_running")
     def test_get_status_running(self, mock_find):
-        from services.screen_manager import get_status
+        from services.screen_manager import (
+            _invalidate_status_cache,
+            get_status,
+        )
 
+        _invalidate_status_cache()
         mock_find.return_value = (1234, 5)
         result = get_status()
         assert result["running"] is True
@@ -257,8 +265,12 @@ class TestGetStatus:
 
     @patch("services.screen_manager._find_running")
     def test_get_status_stopped(self, mock_find):
-        from services.screen_manager import get_status
+        from services.screen_manager import (
+            _invalidate_status_cache,
+            get_status,
+        )
 
+        _invalidate_status_cache()
         mock_find.return_value = (None, None)
         result = get_status()
         assert result["running"] is False

@@ -228,3 +228,143 @@ class TestGetSafety:
 
         result = get_safety(1)
         assert result is None
+
+
+class TestTheoreticalQuantization:
+    @patch("services.vram_safety.VramMonitor.get_total_vram")
+    @patch("services.vram_safety.get_or_parse_metadata")
+    @patch("services.vram_safety.get_category")
+    @patch("services.vram_safety.get_all_version_data")
+    def test_q4_0_quantization(
+        self, mock_all_data, mock_category, mock_meta, mock_total_vram
+    ):
+        """q4_0 uses 0.5 bytes per element, reducing KV cache by half vs f16."""
+        from services.vram_safety import theoretical_estimate
+
+        mock_all_data.return_value = {
+            "model_loading": {"model_path": "/models/test.gguf"},
+        }
+        mock_category.side_effect = [
+            {"ctx_size": 8192},
+            {"cache_type_k": "q4_0"},
+        ]
+        mock_meta.return_value = {
+            "file_size_bytes": 4 * 1024 * 1024 * 1024,
+            "n_layers": 32,
+            "n_embd": 4096,
+            "n_head": 32,
+            "n_head_kv": 4,
+        }
+        mock_total_vram.return_value = 24576
+
+        result = theoretical_estimate(1)
+
+        assert result is not None
+        # head_dim = 4096/32 = 128, kv_bytes = 0.5 (q4_0)
+        # kv_per_token = 2 * 32 * 4 * 128 * 0.5 = 16384
+        assert result["kv_per_token_bytes"] == 16384.0
+
+
+class TestTheoreticalNHeadKvFallback:
+    @patch("services.vram_safety.VramMonitor.get_total_vram")
+    @patch("services.vram_safety.get_or_parse_metadata")
+    @patch("services.vram_safety.get_category")
+    @patch("services.vram_safety.get_all_version_data")
+    def test_n_head_kv_falls_back_to_n_head(
+        self, mock_all_data, mock_category, mock_meta, mock_total_vram
+    ):
+        """When n_head_kv is None, it should fall back to n_head."""
+        from services.vram_safety import theoretical_estimate
+
+        mock_all_data.return_value = {
+            "model_loading": {"model_path": "/models/test.gguf"},
+        }
+        mock_category.side_effect = [
+            {"ctx_size": 8192},
+            {"cache_type_k": "f16"},
+        ]
+        mock_meta.return_value = {
+            "file_size_bytes": 4 * 1024 * 1024 * 1024,
+            "n_layers": 32,
+            "n_embd": 4096,
+            "n_head": 32,
+            "n_head_kv": None,  # Should fall back to n_head=32
+        }
+        mock_total_vram.return_value = 24576
+
+        result = theoretical_estimate(1)
+
+        assert result is not None
+        # head_dim = 4096/32 = 128, kv_bytes = 2 (f16), n_head_kv = 32
+        # kv_per_token = 2 * 32 * 32 * 128 * 2 = 524288
+        assert result["kv_per_token_bytes"] == 524288.0
+
+
+class TestEmpiricalEdgeCases:
+    @patch("services.vram_safety.get_latest_stress_test")
+    @patch("services.vram_safety.get_category")
+    def test_negative_compaction_falls_back(self, mock_category, mock_test):
+        """Negative compaction coefficient should use theoretical buffer."""
+        from services.vram_safety import empirical_estimate
+
+        mock_test.return_value = {
+            "status": "completed",
+            "kv_per_token_bytes": 131072,
+            "compaction_coefficient": -1,  # Invalid, should fall back
+            "model_weight_size_mb": 8192,
+            "total_vram_mb": 24576,
+            "id": 1,
+        }
+        mock_category.return_value = {"ctx_size": 8192}
+
+        result = empirical_estimate(1)
+
+        assert result is not None
+        assert result["compaction_coefficient"] == -1
+
+    @patch("services.vram_safety.get_latest_stress_test")
+    def test_missing_required_fields(self, mock_test):
+        """Missing kv_per_token_bytes should return None."""
+        from services.vram_safety import empirical_estimate
+
+        mock_test.return_value = {
+            "status": "completed",
+            "model_weight_size_mb": 8192,
+            "total_vram_mb": 24576,
+            "id": 1,
+        }
+        result = empirical_estimate(1)
+        assert result is None
+
+    @patch("services.vram_safety.get_latest_stress_test")
+    def test_zero_kv_per_token_bytes(self, mock_test):
+        """Zero kv_per_token_bytes should return None."""
+        from services.vram_safety import empirical_estimate
+
+        mock_test.return_value = {
+            "status": "completed",
+            "kv_per_token_bytes": 0,
+            "model_weight_size_mb": 8192,
+            "total_vram_mb": 24576,
+            "id": 1,
+        }
+        result = empirical_estimate(1)
+        assert result is None
+
+
+class TestColorThresholdsExact:
+    def test_green_just_above(self):
+        from services.vram_safety import _color_from_margin
+        assert _color_from_margin(20.1) == "green"
+
+    def test_yellow_at_red_boundary(self):
+        from services.vram_safety import _color_from_margin
+        assert _color_from_margin(5.0) == "yellow"
+
+    def test_red_just_below(self):
+        from services.vram_safety import _color_from_margin
+        assert _color_from_margin(4.99) == "red"
+
+    def test_zero_margin_is_red(self):
+        from services.vram_safety import _color_from_margin
+        assert _color_from_margin(0) == "red"

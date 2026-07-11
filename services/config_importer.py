@@ -35,8 +35,14 @@ def read_cmdline(pid):
 
 
 def _normalize_flag(name):
-    """Normalize flag name: strip --, convert underscores to hyphens."""
+    """Normalize flag name: strip leading dashes, convert underscores to hyphens."""
     return name.lstrip("-").replace("_", "-")
+
+
+def _parse_no_flag(arg):
+    """Parse --no-xxx flag. Returns the positive flag name (normalized)."""
+    # arg is '--no-...', extract '...' part and normalize
+    return _normalize_flag(arg[5:])
 
 
 def parse_args(args):
@@ -144,7 +150,7 @@ def parse_args(args):
 
         # Long --no-xxx flags (check before other long flags)
         if arg.startswith("--no-"):
-            positive = _normalize_flag(arg[5:])  # strip '--no-', keep rest
+            positive = _parse_no_flag(arg)
             result[positive] = False
             i += 1
             continue
@@ -557,7 +563,7 @@ def _compare_signatures(signature, version_id):
             return str(a) == str(b)
 
     for col, val in signature.items():
-        if val is None or val == 0 or val == "":
+        if val is None or val == "":
             continue
         cat = next((c for c in CATEGORIES if (c, col) in FLAG_TO_COLUMN.values()), None)
         if not cat:
@@ -628,7 +634,7 @@ def import_running_config(config_name=None):
     if existing_config:
         latest = get_latest_version(existing_config["id"])
         if latest:
-            latest_vid = latest["id"] if isinstance(latest, dict) else latest[0]
+            latest_vid = latest["id"]
             if _compare_signatures(signature, latest_vid):
                 # Settings match — no new version needed
                 return existing_config["id"], latest_vid, parsed, False
