@@ -145,6 +145,51 @@ class TestSelectDefault:
         assert '<option value="">(default)</option>' in html
 
 
+class TestTristateWithBooleans:
+    def test_tristate_true_becomes_enable(self):
+        html = render_field("memory", "mmap", True)
+        assert "<select" in html
+        assert 'value="enable" selected' in html
+
+    def test_tristate_false_becomes_disable(self):
+        html = render_field("memory", "mmap", False)
+        assert "<select" in html
+        assert 'value="disable" selected' in html
+
+
+class TestSelectStringOption:
+    def test_select_string_value(self):
+        html = render_field("gpu_device", "flash_attn", "on")
+        assert "<select" in html
+        assert 'value="on" selected' in html
+
+    def test_select_auto_value(self):
+        html = render_field("gpu_device", "flash_attn", "auto")
+        assert "<select" in html
+        assert 'value="auto" selected' in html
+
+
+class TestFloatField:
+    def test_float_value(self):
+        html = render_field("sampling", "temperature", 0.8)
+        assert 'type="float"' in html
+        assert "0.8" in html
+
+
+class TestPasswordSpecialChars:
+    def test_password_with_html_chars(self):
+        html = render_field("server", "api_key", '<key>&"test"')
+        assert "&lt;" in html or "&amp;" in html or "&quot;" in html
+
+
+class TestUnknownCategoryFallback:
+    def test_unknown_category_renders_text(self):
+        html = render_field("nonexistent_category", "some_col", "val")
+        assert 'type="text"' in html
+        assert 'name="nonexistent_category_some_col"' in html
+        assert 'value="val"' in html
+
+
 class TestRegisterTemplateHelpers:
     def test_registers_all_functions(self):
         from app import create_app

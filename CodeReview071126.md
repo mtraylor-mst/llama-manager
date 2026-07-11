@@ -28,8 +28,8 @@
 
 ## Testing Gaps
 
-- [ ] **`template_utils.py`** — `render_field()` has zero tests despite handling bool/tristate/select/password/complex rendering.
-- [ ] **`model_parser.py`** — No tests for log parsing regexes (`_PRINT_INFO_RE`, `_MEMORY_BREAKDOWN_RE`).
-- [ ] **`command_diff.py`** — No unit tests for `_parse_command_to_dict` or `diff_commands`.
-- [ ] **`vram_safety.py`** — No tests for `theoretical_estimate` or `empirical_estimate` calculations.
+- [x] **`template_utils.py`** — ~~`render_field()` had zero tests...~~ **Fixed.** Added 6 new tests (31 total in file): tristate with Python booleans, select with string options, float field, password with HTML special chars, unknown category fallback. Existing tests already covered bool/tristate/select/password/complex well.
+- [x] **`model_parser.py`** — ~~No tests for log parsing regexes...~~ **Fixed.** Added 12 new tests (27 total in file): `_parse_size_to_bytes` direct tests, `_get_ctx_from_log`, memory breakdown derived fields (`ctx_per_token_mb`, `est_max_ctx_tokens`), and regex edge cases (extra whitespace, string values, BPW parenthesis).
+- [x] **`command_diff.py`** — ~~No unit tests...~~ **Fixed.** Added 9 new tests (21 total in file): consecutive boolean flags, flag at end without value, multi-value flag accumulation, mixed flags/values, boolean flag add/remove/change in diffs, both versions None edge case.
+- [x] **`vram_safety.py`** — ~~No tests for estimates...~~ **Fixed.** Added 7 new tests (31 total in file): q4_0 quantization calculation, n_head_kv fallback to n_head, negative compaction coefficient fallback, missing/zero required fields in empirical, exact color threshold boundaries.
 - [ ] ~~**`vram_stress_test.py`** (603 lines) — Zero tests.~~ *(deprioritized — incomplete feature)*
