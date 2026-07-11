@@ -8,6 +8,7 @@ from flask import (
     jsonify,
     session,
 )
+from models.configs import duplicate_version, get_all_version_data
 
 bp = Blueprint("versions", __name__)
 
@@ -121,7 +122,7 @@ def edit_latest(config_id):
 
 @bp.route("/version/<int:version_id>/edit", methods=["GET", "POST"])
 def edit(version_id):
-    from models.configs import get_version, get_all_version_data
+    from models.configs import get_version
 
     version = get_version(version_id)
     if not version:
@@ -133,7 +134,7 @@ def edit(version_id):
 
 @bp.route("/version/<int:version_id>/fork-edit", methods=["GET", "POST"])
 def fork_edit(version_id):
-    from models.configs import get_version, get_all_version_data
+    from models.configs import get_version
 
     version = get_version(version_id)
     if not version:
@@ -250,51 +251,16 @@ def _save_version_data(version_id, config_id, form_data=None):
 
 
 def _edit_form(version, config, data=None, is_fork=False):
-    from models.configs import (
-        CATEGORIES,
-        COMPLEX_TABLES,
-        get_all_version_data,
-        create_version,
-    )
+    from models.configs import CATEGORIES, COMPLEX_TABLES
 
     if request.method == "POST":
         if is_fork:
-            # This is a fork -- create the version now on save
             source_vid = session.pop("fork_source_version_id", None)
             config_id = session.pop("fork_config_id", None)
-            new_vid = create_version(config_id, request.form.get("comments", ""))
+            new_vid = duplicate_version(
+                source_vid, config_id, request.form.get("comments", "")
+            )
             session["fork_version_id"] = new_vid
-
-            # Copy data from source version to the new version
-            from models.base import get_conn
-
-            source_data = get_all_version_data(source_vid)
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    for cat in CATEGORIES:
-                        table = f"v_{cat}"
-                        row = source_data.get(cat, {})
-                        if row:
-                            row.pop("version_id", None)
-                            cols = ", ".join(row.keys())
-                            placeholders = ", ".join(["%s"] * len(row))
-                            cur.execute(
-                                f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
-                                (new_vid,) + tuple(row.values()),
-                            )
-                    for tbl in COMPLEX_TABLES:
-                        table = f"v_{tbl}"
-                        rows = source_data.get(tbl, [])
-                        for row in rows:
-                            row.pop("id", None)
-                            row.pop("version_id", None)
-                            cols = ", ".join(row.keys())
-                            placeholders = ", ".join(["%s"] * len(row))
-                            cur.execute(
-                                f"INSERT INTO {table} (version_id, {cols}) VALUES (%s, {placeholders})",
-                                (new_vid,) + tuple(row.values()),
-                            )
-                conn.commit()
 
             _save_version_data(new_vid, config_id, request.form)
             flash("Version saved", "success")

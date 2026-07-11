@@ -146,6 +146,8 @@ def _find_running():
                     if fd_target.startswith("/tmp/llama-server-"):
                         vid = _extract_version_id_from_log(fd_target)
                         return p, vid
+                    # Process found but stdout not a managed log file — return with vid=None
+                    return p, None
                 except (ValueError, ProcessLookupError, OSError):
                     continue
     except (FileNotFoundError, subprocess.TimeoutExpired):

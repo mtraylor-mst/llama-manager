@@ -417,6 +417,7 @@ COLUMN_MAP = {
 
 # Fields that are boolean flags (1 = enable flag, 0 = disable/negate flag)
 BOOL_FIELDS = {
+    "model_loading": {"mmproj_auto", "mmproj_offload"},
     "context_batching": {
         "cont_batching",
         "context_shift",
