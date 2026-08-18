@@ -364,6 +364,7 @@ _BOOL_COLS = {
     "sampling": {"ignore_eos", "backend_sampling"},
     "server": {
         "reuse_port",
+        "webui_mcp_proxy",
         "embedding",
         "reranking",
         "metrics",
@@ -390,7 +391,12 @@ _TRISTATE_COLS = {
     "gpu_device": {"kv_offload", "repack", "op_offload"},
     "memory": {"mmap", "direct_io"},
     "server": {"webui", "slots"},
-    "chat_templates": {"jinja", "skip_chat_parsing", "prefill_assistant"},
+    "chat_templates": {
+        "jinja",
+        "skip_chat_parsing",
+        "prefill_assistant",
+        "reasoning_preserve",
+    },
     "checkpoints": {"kv_unified", "cache_idle_slots"},
 }
 

@@ -463,3 +463,87 @@ class TestSaveVersionData:
         rows = lora_call[0][2]
         assert len(rows) == 1
         assert rows[0]["path"] == "/lora/test.gguf"
+
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.base.get_conn")
+    def test_save_version_data_api_key_new_value(
+        self, mock_get_conn, mock_save_cat, mock_save_complex
+    ):
+        """A value typed into the visible password field must be saved."""
+        from routes.versions import _save_version_data
+
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        form_data = {
+            "comments": "",
+            "status": None,
+            "server_api_key": "",
+            "server_api_key_edit": "sk-abc123",
+        }
+        _save_version_data(10, 1, form_data)
+
+        server_call = [c for c in mock_save_cat.call_args_list if c[0][1] == "server"][
+            0
+        ]
+        data = server_call[0][2]
+        assert data["api_key"] == "sk-abc123"
+
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.base.get_conn")
+    def test_save_version_data_api_key_edit_overwrites_hidden(
+        self, mock_get_conn, mock_save_cat, mock_save_complex
+    ):
+        """The edited value must take precedence over the hidden field's value."""
+        from routes.versions import _save_version_data
+
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        form_data = {
+            "comments": "",
+            "status": None,
+            "server_api_key": "sk-old",
+            "server_api_key_edit": "sk-new",
+        }
+        _save_version_data(10, 1, form_data)
+
+        server_call = [c for c in mock_save_cat.call_args_list if c[0][1] == "server"][
+            0
+        ]
+        data = server_call[0][2]
+        assert data["api_key"] == "sk-new"
+
+    @patch("models.configs.save_complex_table")
+    @patch("models.configs.save_category")
+    @patch("models.base.get_conn")
+    def test_save_version_data_api_key_blank_edit_preserves_old(
+        self, mock_get_conn, mock_save_cat, mock_save_complex
+    ):
+        """Leaving the password field blank keeps the previously saved value."""
+        from routes.versions import _save_version_data
+
+        mock_conn = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_conn.return_value
+        mock_conn.return_value.cursor.return_value.__enter__.return_value = MagicMock()
+        mock_get_conn.return_value = mock_conn
+
+        form_data = {
+            "comments": "",
+            "status": None,
+            "server_api_key": "sk-old",
+            "server_api_key_edit": "",
+        }
+        _save_version_data(10, 1, form_data)
+
+        server_call = [c for c in mock_save_cat.call_args_list if c[0][1] == "server"][
+            0
+        ]
+        data = server_call[0][2]
+        assert data["api_key"] == "sk-old"

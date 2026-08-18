@@ -28,7 +28,6 @@ Configure which model to load and how to load it.
 | HF File | `--hf-file` <br> `-hff` | — | Specific filename within the HuggingFace repo. |
 | HF Token | `--hf-token` <br> `-hft` | — | Authentication token for private HuggingFace repos. |
 | Draft Model | `--model-draft` <br> `-md` | — | Secondary model used for speculative decoding (drafting tokens). |
-| Vocoder Model | `--model-vocoder` | — | Audio vocoder model for speech-enabled models. |
 | MMProj Path | `--mmproj` <br> `-mm` | — | Path to multi-modal projection weights for vision models. |
 | MMProj URL | `--mmproj-url` <br> `-mmu` | — | Remote URL to download mmproj weights from. |
 | Auto MMProj | `--mmproj-auto` <br> `--no-mmproj` | default: off | Automatically search for and load a matching mmproj file. (Tristate) |
@@ -150,10 +149,11 @@ Manage memory allocation, caching strategy, and disk I/O behavior.
 | KV Cache Type V | `-ctv` <br> `--cache-type-v` | f16 | Data type for Value cache: same options as Key cache. |
 | KV Cache K (Draft) | `-ctkd` <br> `--cache-type-k-draft` | — | Key cache type for draft model in speculative decoding. |
 | KV Cache V (Draft) | `-ctvd` <br> `--cache-type-v-draft` | — | Value cache type for draft model. |
-| Memory Map | `--mmap` <br> `--no-mmap` | default: on | Use memory-mapped I/O for loading model weights. Faster startup, lower RAM overhead. (Tristate) |
-| Lock Memory | `--mlock` | off | Lock model in RAM to prevent swapping. Ensures consistent performance. |
-| Direct I/O | `--direct-io` <br> `--no-direct-io` <br> `-dio` | default: off | Bypass OS page cache for model loading. Useful with large models on high-RAM systems. (Tristate) |
-| Defrag Threshold | `-dt` <br> `--defrag-thold` | — | KV cache defragmentation threshold. Reclaims fragmented memory slots. |
+| Load Mode | `-lm` <br> `--load-mode` | mmap | Model loading mode: `none`, `mmap`, `mlock`, `mmap+mlock`, `dio`. Replaces the deprecated mmap/mlock/direct-io flags (b10355). Takes precedence if set alongside the legacy options. |
+| Memory Map | `--mmap` <br> `--no-mmap` | default: on | **Deprecated** in favor of `--load-mode mmap`. Use memory-mapped I/O for loading model weights. (Tristate) |
+| Lock Memory | `--mlock` | off | **Deprecated** in favor of `--load-mode mlock`. Lock model in RAM to prevent swapping. |
+| Direct I/O | `--direct-io` <br> `--no-direct-io` <br> `-dio` | default: off | **Deprecated** in favor of `--load-mode dio`. Bypass OS page cache for model loading. (Tristate) |
+| Defrag Threshold | `-dt` <br> `--defrag-thold` | — | **Deprecated.** KV cache defragmentation threshold. |
 | SWA Full | `--swa-full` | off | Enable full Sliding Window Attention mode for models that support it. |
 
 ### Server
@@ -172,7 +172,11 @@ HTTP server configuration, security, and API behavior.
 | API Key | `--api-key` | — | Bearer token required for all API requests. |
 | SSL Key File | `--ssl-key-file` | — | Path to private key file for HTTPS. |
 | SSL Cert File | `--ssl-cert-file` | — | Path to certificate file for HTTPS. |
-| Web UI | `--webui` <br> `--no-webui` | default: on | Enable the built-in web interface. (Tristate) |
+| Web UI | `--webui` <br> `--no-webui` <br> `--ui` | default: on | Enable the built-in web interface. (Tristate) |
+| WebUI MCP Proxy | `--ui-mcp-proxy` <br> `--no-ui-mcp-proxy` | off | Experimental: enable MCP CORS proxy for the web UI. (b10355) |
+| WebUI Config (JSON) | `--ui-config` <br> `--webui-config` | — | Inline JSON with default UI settings. (b10355) |
+| WebUI Config File | `--ui-config-file` <br> `--webui-config-file` | — | Path to JSON file with default UI settings. (b10355) |
+| Tools | `--tools` | — | Enable built-in agent tools: `all`, or comma-separated list (e.g., `read_file,grep_search`). Limit CORS origins to localhost when set. (b10355) |
 | Embeddings | `--embedding` <br> `--embeddings` | off | Run in embeddings-only mode (disables chat/completion endpoints). |
 | Reranking | `--rerank` <br> `--reranking` | off | Enable reranking endpoint for search/retrieval use cases. |
 | Metrics | `--metrics` | off | Expose Prometheus-compatible metrics at `/metrics`. |
@@ -189,17 +193,21 @@ Accelerate generation using a draft model or ngram-based speculation.
 
 | Parameter | Flag(s) | Default | Description |
 |---|---|---|---|
-| Draft Max Tokens | `--draft` <br> `--draft-max` | 16 | Maximum number of tokens the draft model proposes per step. |
-| Draft Min Tokens | `--draft-min` <br> `--draft-n-min` | 0 | Minimum draft tokens required before verification. |
-| Draft P Min | `--draft-p-min` | 0.75 | Minimum acceptance probability threshold for draft tokens. |
-| Draft Context Size | `-cd` <br> `--ctx-size-draft` | — | Context size for the draft model (defaults to main context). |
+| Draft N Max | `--spec-draft-n-max` | 3 | Maximum number of tokens to draft for speculative decoding. (b10355: replaces removed `--draft`/`--draft-max`) |
+| Draft N Min | `--spec-draft-n-min` | 0 | Minimum number of draft tokens for speculative decoding. (b10355: replaces removed `--draft-min`) |
+| Draft P Min | `--spec-draft-p-min` <br> `--draft-p-min` | 0.00 | Minimum speculative decoding probability (greedy). |
+| Draft P Split | `--spec-draft-p-split` <br> `--draft-p-split` | 0.10 | Speculative decoding split probability. (b10355) |
 | Devices (Draft) | `-devd` <br> `--device-draft` | — | GPU devices assigned to the draft model. |
 | GPU Layers (Draft) | `-ngld` <br> `--gpu-layers-draft` | — | Number of draft model layers to offload to GPU. |
-| Spec Type | `--spec-type` | none | Speculation method: `none`, `ngram-cache`, `ngram-simple`, `ngram-map-k`, `draft-mtp`. |
-| Ngram Size N | `--spec-ngram-size-n` | 12 | Minimum n-gram size for ngram-based speculation. |
-| Ngram Size M | `--spec-ngram-size-m` | 48 | Maximum n-gram size for ngram-based speculation. |
-| Ngram Min Hits | `--spec-ngram-min-hits` | — | Minimum historical hits required before an n-gram is used for speculation. |
-| Draft N Max | `--spec-draft-n-max` | — | Maximum number of draft tokens for MTP speculative decoding. |
+| Spec Type | `--spec-type` | none | Comma-separated speculation methods: `none`, `draft-simple`, `draft-eagle3`, `draft-mtp`, `draft-dflash`, `draft-dspark`, `ngram-simple`, `ngram-map-k`, `ngram-map-k4v`, `ngram-mod`, `ngram-cache`. (b10355) |
+| Ngram Simple Size N/M | `--spec-ngram-simple-size-n` <br> `--spec-ngram-simple-size-m` | 12 / 48 | Lookup n-gram / draft m-gram sizes for `ngram-simple`. (b10355: replaces removed `--spec-ngram-size-n/-m`) |
+| Ngram Simple Min Hits | `--spec-ngram-simple-min-hits` | 1 | Minimum hits for `ngram-simple`. (b10355: replaces removed `--spec-ngram-min-hits`) |
+| Ngram Map-K Size N/M | `--spec-ngram-map-k-size-n` <br> `--spec-ngram-map-k-size-m` | 12 / 48 | N-gram sizes for `ngram-map-k`. (b10355) |
+| Ngram Map-K Min Hits | `--spec-ngram-map-k-min-hits` | 1 | Minimum hits for `ngram-map-k`. (b10355) |
+| Ngram Map-K4V Size N/M | `--spec-ngram-map-k4v-size-n` <br> `--spec-ngram-map-k4v-size-m` | 12 / 48 | N-gram sizes for `ngram-map-k4v`. (b10355) |
+| Ngram Map-K4V Min Hits | `--spec-ngram-map-k4v-min-hits` | 1 | Minimum hits for `ngram-map-k4v`. (b10355) |
+| Ngram Mod N Min/Max | `--spec-ngram-mod-n-min` <br> `--spec-ngram-mod-n-max` | 48 / 64 | Min/max ngram tokens for `ngram-mod`. (b10355) |
+| Ngram Mod N Match | `--spec-ngram-mod-n-match` | 24 | Lookup length for `ngram-mod`. (b10355) |
 | Override Tensor Draft | `-otd` <br> `--override-tensor-draft` | — | Tensor override pattern for the draft model. |
 
 ### Chat & Templates
@@ -216,6 +224,7 @@ Control chat formatting, reasoning behavior, and template handling.
 | Reasoning | `-rea` <br> `--reasoning` | auto | Enable/disable reasoning output: `auto`, `on`, `off`. |
 | Reasoning Budget | `--reasoning-budget` | -1 | Maximum tokens allocated for reasoning. `-1` = unrestricted. |
 | Reasoning Budget Msg | `--reasoning-budget-message` | — | Custom message appended when the reasoning budget is exceeded. |
+| Reasoning Preserve | `--reasoning-preserve` <br> `--no-reasoning-preserve` | template default | Preserve the reasoning trace in the full history, not just the last assistant message. (Tristate) (b10355) |
 | Skip Chat Parsing | `--skip-chat-parsing` <br> `--no-skip-chat-parsing` | default: off | Bypass chat template parsing and send raw content to the model. (Tristate) |
 | Prefill Assistant | `--prefill-assistant` <br> `--no-prefill-assistant` | default: off | Prefill the assistant role token to steer generation start. (Tristate) |
 
@@ -225,8 +234,8 @@ Manage context checkpointing, RAM caching, and lookup strategies.
 
 | Parameter | Flag(s) | Default | Description |
 |---|---|---|---|
-| Context Checkpoints | `-ctxcp` <br> `--ctx-checkpoints` | 32 | Number of context checkpoints to maintain for fast recovery. |
-| Checkpoint Every N | `-cpent` <br> `--checkpoint-every-n-tokens` | — | Create a checkpoint every N generated tokens. |
+| Context Checkpoints | `-ctxcp` <br> `--ctx-checkpoints` | 32 | Number of context checkpoints to maintain per slot. |
+| Checkpoint Min Step | `-cms` <br> `--checkpoint-min-step` | 8192 | Minimum spacing between context checkpoints in tokens. `0` = no minimum. (b10355: replaces removed `--checkpoint-every-n-tokens`) |
 | Cache RAM | `-cram` <br> `--cache-ram` | -1 | Maximum RAM (MiB) allocated for the KV cache. `-1` = no limit. |
 | Unified KV Buffer | `--kv-unified` <br> `--no-kv-unified` <br> `-kvu` | default: off | Use a single unified buffer for all KV caches instead of per-slot allocation. (Tristate) |
 | Cache Idle Slots | `--cache-idle-slots` <br> `--no-cache-idle-slots` | default: off | Preserve cached context in idle (inactive) slots. (Tristate) |
@@ -277,8 +286,8 @@ Low-level model overrides, grammar constraints, and RoPE configuration.
 
 Some parameters support multiple entries and are stored as tables rather than single values.
 
-#### LoRA Adapters (`--lora`)
-Attach fine-tuned adapter weights with individual scaling factors. Each entry has a `path` to the `.bin` or `.safetensors` file and a `scale` multiplier (e.g., `1.0`).
+#### LoRA Adapters (`--lora` / `--lora-scaled`)
+Attach fine-tuned adapter weights with individual scaling factors. Each entry has a `path` to the `.bin` or `.safetensors` file and a `scale` multiplier (e.g., `1.0`). Since llama.cpp b10355, adapters with a scale are passed via `--lora-scaled path:scale` while unscaled adapters use plain `--lora`.
 
 #### Logit Biases (`--logit-bias`)
 Bias specific token IDs toward or away from selection. Each entry specifies a `token_id` and a `bias_value` (positive = encourage, negative = discourage).

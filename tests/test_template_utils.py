@@ -115,7 +115,7 @@ class TestPasswordField:
         assert 'type="hidden"' in html
         # Secret is only in hidden field, not visible password input
         assert 'name="server_api_key" value="mysecret123">' in html
-        assert 'name="__server_api_key" value=""' in html
+        assert 'name="server_api_key_edit" value=""' in html
         assert 'placeholder="••••••"' in html
 
     def test_password_field_empty(self):

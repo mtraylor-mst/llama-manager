@@ -114,9 +114,21 @@ CATEGORY_FIELDS = {
                 ("q4_0", "q4_0"),
             ],
         ),
-        ("mmap", "Memory Map", "tristate", None),
-        ("mlock", "Lock Memory", "bool", None),
-        ("direct_io", "Direct I/O", "tristate", None),
+        (
+            "load_mode",
+            "Load Mode",
+            "select",
+            [
+                ("none", "none"),
+                ("mmap", "mmap"),
+                ("mlock", "mlock"),
+                ("mmap+mlock", "mmap+mlock"),
+                ("dio", "dio"),
+            ],
+        ),
+        ("mmap", "Memory Map (deprecated)", "tristate", "use Load Mode"),
+        ("mlock", "Lock Memory (deprecated)", "bool", "use Load Mode"),
+        ("direct_io", "Direct I/O (deprecated)", "tristate", "use Load Mode"),
     ],
     "sampling": [
         ("seed", "Seed", "int", "-1 = random"),
@@ -148,6 +160,10 @@ CATEGORY_FIELDS = {
         ("timeout", "Timeout (sec)", "int", "default: 600"),
         ("threads_http", "HTTP Threads", "int", "-1 = default"),
         ("webui", "Web UI", "tristate", None),
+        ("webui_mcp_proxy", "WebUI MCP Proxy", "bool", None),
+        ("webui_config", "WebUI Config (JSON)", "text", None),
+        ("webui_config_file", "WebUI Config File", "text", None),
+        ("tools", "Tools", "text", "all, or comma-separated list"),
         ("metrics", "Prometheus Metrics", "bool", None),
         ("slots", "Slots Endpoint", "tristate", None),
         ("embedding", "Embeddings Only", "bool", None),
@@ -156,25 +172,100 @@ CATEGORY_FIELDS = {
         ("sleep_idle_seconds", "Sleep Idle (sec)", "int", "-1 = disabled"),
     ],
     "speculative": [
-        ("draft_max", "Draft Max Tokens", "int", "default: 16"),
-        ("draft_min", "Draft Min Tokens", "int", "default: 0"),
-        ("draft_p_min", "Draft P Min", "float", "default: 0.75"),
-        ("ctx_size_draft", "Draft Context Size", "int", None),
+        ("spec_draft_n_max", "Draft N Max", "int", "default: 3, --spec-draft-n-max"),
+        ("spec_draft_n_min", "Draft N Min", "int", "default: 0"),
+        ("draft_p_min", "Draft P Min", "float", "default: 0.00"),
+        ("spec_draft_p_split", "Draft P Split", "float", "default: 0.10"),
         (
             "spec_type",
             "Spec Type",
             "select",
             [
                 ("none", "none"),
-                ("ngram-cache", "ngram-cache"),
+                ("draft-simple", "draft-simple"),
+                ("draft-eagle3", "draft-eagle3"),
+                ("draft-mtp", "draft-mtp (MTP)"),
+                ("draft-dflash", "draft-dflash"),
+                ("draft-dspark", "draft-dspark"),
                 ("ngram-simple", "ngram-simple"),
                 ("ngram-map-k", "ngram-map-k"),
-                ("draft-mtp", "draft-mtp (MTP)"),
+                ("ngram-map-k4v", "ngram-map-k4v"),
+                ("ngram-mod", "ngram-mod"),
+                ("ngram-cache", "ngram-cache"),
             ],
         ),
-        ("spec_ngram_size_n", "Ngram Size N", "int", "default: 12"),
-        ("spec_ngram_size_m", "Ngram Size M", "int", "default: 48"),
-        ("spec_draft_n_max", "Draft N Max", "int", None),
+        (
+            "spec_ngram_simple_size_n",
+            "Ngram Simple Size N",
+            "int",
+            "default: 12, ngram-simple",
+        ),
+        (
+            "spec_ngram_simple_size_m",
+            "Ngram Simple Size M",
+            "int",
+            "default: 48, ngram-simple",
+        ),
+        (
+            "spec_ngram_simple_min_hits",
+            "Ngram Simple Min Hits",
+            "int",
+            "default: 1, ngram-simple",
+        ),
+        (
+            "spec_ngram_map_k_size_n",
+            "Ngram Map-K Size N",
+            "int",
+            "default: 12, ngram-map-k",
+        ),
+        (
+            "spec_ngram_map_k_size_m",
+            "Ngram Map-K Size M",
+            "int",
+            "default: 48, ngram-map-k",
+        ),
+        (
+            "spec_ngram_map_k_min_hits",
+            "Ngram Map-K Min Hits",
+            "int",
+            "default: 1, ngram-map-k",
+        ),
+        (
+            "spec_ngram_map_k4v_size_n",
+            "Ngram Map-K4V Size N",
+            "int",
+            "default: 12, ngram-map-k4v",
+        ),
+        (
+            "spec_ngram_map_k4v_size_m",
+            "Ngram Map-K4V Size M",
+            "int",
+            "default: 48, ngram-map-k4v",
+        ),
+        (
+            "spec_ngram_map_k4v_min_hits",
+            "Ngram Map-K4V Min Hits",
+            "int",
+            "default: 1, ngram-map-k4v",
+        ),
+        (
+            "spec_ngram_mod_n_min",
+            "Ngram Mod N Min",
+            "int",
+            "default: 48, ngram-mod",
+        ),
+        (
+            "spec_ngram_mod_n_max",
+            "Ngram Mod N Max",
+            "int",
+            "default: 64, ngram-mod",
+        ),
+        (
+            "spec_ngram_mod_n_match",
+            "Ngram Mod N Match",
+            "int",
+            "default: 24, ngram-mod",
+        ),
     ],
     "chat_templates": [
         (
@@ -211,11 +302,23 @@ CATEGORY_FIELDS = {
             [("auto", "auto"), ("none", "none"), ("deepseek", "deepseek")],
         ),
         ("reasoning_budget", "Reasoning Budget", "int", "-1 = unrestricted"),
+        (
+            "reasoning_preserve",
+            "Reasoning Preserve",
+            "tristate",
+            "keep reasoning trace in full history",
+        ),
         ("skip_chat_parsing", "Skip Chat Parsing", "tristate", None),
         ("prefill_assistant", "Prefill Assistant", "tristate", None),
     ],
     "checkpoints": [
         ("ctx_checkpoints", "Context Checkpoints", "int", "default: 32"),
+        (
+            "checkpoint_min_step",
+            "Checkpoint Min Step",
+            "int",
+            "default: 8192, 0 = no minimum",
+        ),
         ("cache_ram", "Cache RAM (MiB)", "int", "-1 = no limit"),
         ("kv_unified", "Unified KV Buffer", "tristate", None),
         ("cache_idle_slots", "Cache Idle Slots", "tristate", None),
@@ -368,7 +471,7 @@ def render_field(category, col, value):
         placeholder = 'placeholder="••••••"' if value else ""
         return (
             f'<input type="hidden" name="{name}" value="{escaped_value}">'
-            f'<input type="password" name="__{name}" value="" {placeholder}>'
+            f'<input type="password" name="{name}_edit" value="" {placeholder}>'
         )
 
     else:

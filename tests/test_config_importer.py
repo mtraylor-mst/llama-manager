@@ -62,6 +62,53 @@ class TestParseArgs:
         result = parse_args(args)
         assert result == {}
 
+    def test_load_mode_flag_with_value(self):
+        args = ["llama-server", "--load-mode", "mmap+mlock"]
+        result = parse_args(args)
+        assert result["load-mode"] == "mmap+mlock"
+
+    def test_short_load_mode_flag(self):
+        args = ["llama-server", "-lm", "mlock"]
+        result = parse_args(args)
+        assert result["load-mode"] == "mlock"
+
+    def test_ui_flag_bool(self):
+        args = ["llama-server", "--ui"]
+        result = parse_args(args)
+        assert result["ui"] is True
+
+    def test_no_ui_mcp_proxy_flag(self):
+        args = ["llama-server", "--no-ui-mcp-proxy"]
+        result = parse_args(args)
+        assert result["ui-mcp-proxy"] is False
+
+    def test_spec_draft_n_min_flag(self):
+        args = ["llama-server", "--spec-draft-n-min", "2"]
+        result = parse_args(args)
+        assert result["spec-draft-n-min"] == "2"
+
+    def test_checkpoint_min_step_flag(self):
+        args = ["llama-server", "--checkpoint-min-step", "4096"]
+        result = parse_args(args)
+        assert result["checkpoint-min-step"] == "4096"
+
+    def test_spec_ngram_mod_n_match_flag(self):
+        args = ["llama-server", "--spec-ngram-mod-n-match", "24"]
+        result = parse_args(args)
+        assert result["spec-ngram-mod-n-match"] == "24"
+
+    def test_reasoning_preserve_flag(self):
+        args = ["llama-server", "--reasoning-preserve", "--port", "8080"]
+        result = parse_args(args)
+        assert result["reasoning-preserve"] is True
+        # must not swallow the following argument
+        assert result["port"] == "8080"
+
+    def test_no_reasoning_preserve_flag(self):
+        args = ["llama-server", "--no-reasoning-preserve"]
+        result = parse_args(args)
+        assert result["reasoning-preserve"] is False
+
 
 class TestCoerceValue:
     def test_bool_true(self):
@@ -82,6 +129,83 @@ class TestCoerceValue:
     def test_string_passthrough(self):
         result = coerce_value("model_path", "/path/to/model.gguf")
         assert result == "/path/to/model.gguf"
+
+    def test_spec_draft_n_min_int(self):
+        assert coerce_value("spec_draft_n_min", "3") == 3
+
+    def test_spec_draft_p_split_float(self):
+        assert coerce_value("spec_draft_p_split", "0.2") == 0.2
+
+    def test_webui_mcp_proxy_bool(self):
+        assert coerce_value("webui_mcp_proxy", True) == 1
+        assert coerce_value("webui_mcp_proxy", False) == 0
+
+    def test_reasoning_preserve_bool(self):
+        assert coerce_value("reasoning_preserve", True) == 1
+        assert coerce_value("reasoning_preserve", False) == 0
+
+    def test_checkpoint_min_step_int(self):
+        assert coerce_value("checkpoint_min_step", "8192") == 8192
+
+    def test_spec_ngram_simple_size_n_int(self):
+        assert coerce_value("spec_ngram_simple_size_n", "12") == 12
+
+    def test_spec_ngram_mod_n_match_int(self):
+        assert coerce_value("spec_ngram_mod_n_match", "24") == 24
+
+
+class TestFlagToColumnB10355:
+    """b10355 flag mappings in FLAG_TO_COLUMN."""
+
+    def test_load_mode_mapped(self):
+        from services.config_importer import FLAG_TO_COLUMN
+
+        assert FLAG_TO_COLUMN["load-mode"] == ("memory", "load_mode")
+
+    def test_spec_replacement_flags_mapped(self):
+        from services.config_importer import FLAG_TO_COLUMN
+
+        FLAGS = FLAG_TO_COLUMN
+        assert FLAGS["spec-draft-n-max"] == ("speculative", "spec_draft_n_max")
+        assert FLAGS["spec-draft-n-min"] == ("speculative", "spec_draft_n_min")
+        assert FLAGS["spec-draft-p-split"] == ("speculative", "spec_draft_p_split")
+        assert FLAGS["spec-ngram-simple-size-n"] == (
+            "speculative",
+            "spec_ngram_simple_size_n",
+        )
+        assert FLAGS["spec-ngram-map-k4v-min-hits"] == (
+            "speculative",
+            "spec_ngram_map_k4v_min_hits",
+        )
+        assert FLAGS["spec-ngram-mod-n-match"] == (
+            "speculative",
+            "spec_ngram_mod_n_match",
+        )
+
+    def test_checkpoint_min_step_mapped(self):
+        from services.config_importer import FLAG_TO_COLUMN
+
+        assert FLAG_TO_COLUMN["checkpoint-min-step"] == (
+            "checkpoints",
+            "checkpoint_min_step",
+        )
+
+    def test_reasoning_preserve_mapped(self):
+        from services.config_importer import FLAG_TO_COLUMN
+
+        assert FLAG_TO_COLUMN["reasoning-preserve"] == (
+            "chat_templates",
+            "reasoning_preserve",
+        )
+
+    def test_server_ui_flags_mapped(self):
+        from services.config_importer import FLAG_TO_COLUMN
+
+        assert FLAG_TO_COLUMN["ui"] == ("server", "webui")
+        assert FLAG_TO_COLUMN["ui-config"] == ("server", "webui_config")
+        assert FLAG_TO_COLUMN["ui-config-file"] == ("server", "webui_config_file")
+        assert FLAG_TO_COLUMN["ui-mcp-proxy"] == ("server", "webui_mcp_proxy")
+        assert FLAG_TO_COLUMN["tools"] == ("server", "tools")
 
 
 class TestExtractModelName:

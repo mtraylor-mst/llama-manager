@@ -138,6 +138,9 @@ CREATE TABLE IF NOT EXISTS v_memory (
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
 );
 
+-- Migration: llama.cpp b10355 — --load-mode replaces --mmap/--mlock/--direct-io
+ALTER TABLE v_memory ADD COLUMN IF NOT EXISTS load_mode VARCHAR(20);
+
 -- Sampling
 CREATE TABLE IF NOT EXISTS v_sampling (
     version_id INT PRIMARY KEY,
@@ -226,6 +229,23 @@ CREATE TABLE IF NOT EXISTS v_speculative (
 -- Migration: Add spec_draft_n_max column if it doesn't exist yet
 ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_draft_n_max INT;
 
+-- Migration: llama.cpp b10355 — speculative decoding flag rework
+-- (replaces removed --draft-max/--draft-min and generic --spec-ngram-* flags)
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_draft_n_min INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_draft_p_split DECIMAL(4,3);
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_simple_size_n INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_simple_size_m INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_simple_min_hits INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_map_k_size_n INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_map_k_size_m INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_map_k_min_hits INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_map_k4v_size_n INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_map_k4v_size_m INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_map_k4v_min_hits INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_mod_n_min INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_mod_n_max INT;
+ALTER TABLE v_speculative ADD COLUMN IF NOT EXISTS spec_ngram_mod_n_match INT;
+
 -- Chat & Templates
 CREATE TABLE IF NOT EXISTS v_chat_templates (
     version_id INT PRIMARY KEY,
@@ -237,17 +257,23 @@ CREATE TABLE IF NOT EXISTS v_chat_templates (
     reasoning VARCHAR(10),
     reasoning_budget INT,
     reasoning_budget_message TEXT,
+    reasoning_preserve TINYINT(1),
     skip_chat_parsing TINYINT(1),
     prefill_assistant TINYINT(1),
     backend_sampling TINYINT(1),
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
 );
 
+-- Migration: llama.cpp b10355 — --reasoning-preserve keeps the reasoning trace in
+-- full history (tri-state: on / off / template default)
+ALTER TABLE v_chat_templates ADD COLUMN IF NOT EXISTS reasoning_preserve TINYINT(1);
+
 -- Context Checkpoints & Cache
 CREATE TABLE IF NOT EXISTS v_checkpoints (
     version_id INT PRIMARY KEY,
     ctx_checkpoints INT,
     checkpoint_every_nt INT,
+    checkpoint_min_step INT,
     cache_ram INT,
     kv_unified TINYINT(1),
     cache_idle_slots TINYINT(1),
@@ -255,6 +281,10 @@ CREATE TABLE IF NOT EXISTS v_checkpoints (
     lookup_cache_dynamic VARCHAR(512),
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
 );
+
+-- Migration: llama.cpp b10355 — --checkpoint-every-n-tokens removed in favor of
+-- minimum-step spacing
+ALTER TABLE v_checkpoints ADD COLUMN IF NOT EXISTS checkpoint_min_step INT;
 
 -- Logging
 CREATE TABLE IF NOT EXISTS v_logging (
@@ -433,3 +463,17 @@ CREATE TABLE IF NOT EXISTS config_usage (
     exit_reason VARCHAR(50) DEFAULT NULL,
     FOREIGN KEY (version_id) REFERENCES config_versions(id) ON DELETE CASCADE
 );
+
+-- Migration (idempotent, data): llama.cpp b10355 removed --draft-max/--draft-min
+-- and the generic --spec-ngram-* flags. Move stored values to their replacements.
+-- Old columns are kept for reference; they are no longer emitted in commands.
+UPDATE v_speculative SET spec_draft_n_max = draft_max
+  WHERE draft_max IS NOT NULL AND spec_draft_n_max IS NULL;
+UPDATE v_speculative SET spec_draft_n_min = draft_min
+  WHERE draft_min IS NOT NULL AND spec_draft_n_min IS NULL;
+UPDATE v_speculative SET spec_ngram_simple_size_n = spec_ngram_size_n
+  WHERE spec_ngram_size_n IS NOT NULL AND spec_ngram_simple_size_n IS NULL;
+UPDATE v_speculative SET spec_ngram_simple_size_m = spec_ngram_size_m
+  WHERE spec_ngram_size_m IS NOT NULL AND spec_ngram_simple_size_m IS NULL;
+UPDATE v_speculative SET spec_ngram_simple_min_hits = spec_ngram_min_hits
+  WHERE spec_ngram_min_hits IS NOT NULL AND spec_ngram_simple_min_hits IS NULL;
