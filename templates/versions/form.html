@@ -190,5 +190,27 @@ document.querySelectorAll('.common-toggle').forEach(cb => {
         });
     });
 });
+
+// A field marked as a "common option" is rendered in both the Common Options
+// tab and its category tab, so the form contains two controls with the same
+// name. The category tabs come later in the DOM, so on submit their value would
+// overwrite the one edited in the Common tab (leaving the setting stuck at its
+// default). Keep every same-named control in step with the one just changed so
+// the hidden copy can never submit a stale value.
+function syncDuplicateFields(changed) {
+    const peers = document.querySelectorAll('#version-form [name="' + changed.name + '"]');
+    peers.forEach(peer => {
+        if (peer === changed) return;
+        if (changed.type === 'checkbox' || changed.type === 'radio') {
+            peer.checked = changed.checked;
+        } else {
+            peer.value = changed.value;
+        }
+    });
+}
+document.querySelectorAll('#version-form select, #version-form input, #version-form textarea')
+    .forEach(el => {
+        el.addEventListener('change', () => syncDuplicateFields(el));
+    });
 </script>
 {% endblock %}

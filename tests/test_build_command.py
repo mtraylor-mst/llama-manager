@@ -136,10 +136,12 @@ class TestBuildCommand:
         from services.command_builder import build_command
 
         mock_data.return_value = self._mock_data(
-            lora_adapters=[{"path": "/lora/adapter.gguf", "scale": 0.8}],
+            lora_adapters=[{"path": "/lora/adapter.gguf", "scale": 0.8}]
         )
         cmd = build_command(1)
-        assert "--lora" in cmd
+        # scaled adapters are emitted via --lora-scaled since b10355
+        assert "--lora-scaled" in cmd
+        assert "/lora/adapter.gguf:0.8" in cmd
 
     @patch("models.configs.get_all_version_data")
     def test_empty_minimal(self, mock_data):
@@ -438,7 +440,8 @@ class TestBuildCommandComplexTables:
         assert "/models/draft.gguf" in cmd
 
     @patch("models.configs.get_all_version_data")
-    def test_model_vocoder(self, mock_data):
+    def test_model_vocoder_not_emitted(self, mock_data):
+        # --model-vocoder was removed in llama.cpp b10355
         from services.command_builder import build_command
 
         mock_data.return_value = self._mock_data(
@@ -448,8 +451,8 @@ class TestBuildCommandComplexTables:
             }
         )
         cmd = build_command(1)
-        assert "--model-vocoder" in cmd
-        assert "/models/vocoder.gguf" in cmd
+        assert "--model-vocoder" not in cmd
+        assert "/models/vocoder.gguf" not in cmd
 
     @patch("models.configs.get_all_version_data")
     def test_lora_paths_fallback(self, mock_data):
@@ -478,8 +481,8 @@ class TestBuildCommandComplexTables:
             lora_adapters=[{"path": "/lora/structured.gguf", "scale": 1.0}],
         )
         cmd = build_command(1)
-        assert "--lora" in cmd
-        lora_idx = cmd.index("--lora")
+        assert "--lora-scaled" in cmd
+        lora_idx = cmd.index("--lora-scaled")
         assert "structured" in cmd[lora_idx + 1]
         assert "/lora/fallback.gguf" not in cmd
 
@@ -558,6 +561,301 @@ class TestBuildCommandComplexTables:
         cmd = build_command(1)
         assert "--spec-type" in cmd
         assert "draft-mtp" in cmd
+
+
+class TestBuildCommandB10355:
+    """Flags removed/changed/deprecated in llama.cpp build 10355."""
+
+    def _mock_data(self, **overrides):
+        data = {
+            "model_loading": {"model_path": "/models/test.gguf"},
+            "context_batching": {},
+            "cpu_threading": {},
+            "gpu_device": {},
+            "memory": {},
+            "sampling": {},
+            "server": {},
+            "speculative": {},
+            "chat_templates": {},
+            "checkpoints": {},
+            "logging": {},
+            "advanced": {},
+            "lora_adapters": [],
+            "control_vectors": [],
+            "logit_biases": [],
+            "override_kv": [],
+            "override_tensors": [],
+            "dry_sequence_breakers": [],
+        }
+        for key, val in overrides.items():
+            if key in data and isinstance(data[key], dict):
+                data[key].update(val)
+            else:
+                data[key] = val
+        return data
+
+    @patch("models.configs.get_all_version_data")
+    def test_load_mode_emitted(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            memory={"load_mode": "mmap+mlock"}
+        )
+        cmd = build_command(1)
+        idx = cmd.index("--load-mode")
+        assert cmd[idx + 1] == "mmap+mlock"
+
+    @patch("models.configs.get_all_version_data")
+    def test_load_mode_suppresses_deprecated_flags(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            memory={"load_mode": "mlock", "mmap": 1, "mlock": 1, "direct_io": 1}
+        )
+        cmd = build_command(1)
+        assert "--load-mode" in cmd
+        assert "--mmap" not in cmd
+        assert "--no-mmap" not in cmd
+        assert "--mlock" not in cmd
+        assert "--direct-io" not in cmd
+        assert "--no-direct-io" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_deprecated_flags_emitted_without_load_mode(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(memory={"mmap": 1, "mlock": 1})
+        cmd = build_command(1)
+        assert "--mmap" in cmd
+        assert "--mlock" in cmd
+        assert "--load-mode" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_removed_draft_flags_not_emitted(self, mock_data):
+        # --draft-max and --draft-min were removed in b10355
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={"draft_max": 16, "draft_min": 2, "ctx_size_draft": 4096}
+        )
+        cmd = build_command(1)
+        assert "--draft-max" not in cmd
+        assert "--draft" not in cmd
+        assert "--draft-min" not in cmd
+        assert "--ctx-size-draft" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_spec_draft_n_min(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={"spec_draft_n_min": 2}
+        )
+        cmd = build_command(1)
+        assert "--spec-draft-n-min" in cmd
+        assert "2" in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_draft_p_min_uses_spec_flag(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={"draft_p_min": 0.75}
+        )
+        cmd = build_command(1)
+        assert "--spec-draft-p-min" in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_spec_draft_p_split(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={"spec_draft_p_split": 0.2}
+        )
+        cmd = build_command(1)
+        idx = cmd.index("--spec-draft-p-split")
+        assert cmd[idx + 1] == "0.2"
+
+    @patch("models.configs.get_all_version_data")
+    def test_removed_ngram_flags_not_emitted(self, mock_data):
+        # generic --spec-ngram-* flags were removed in b10355
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={
+                "spec_ngram_size_n": 12,
+                "spec_ngram_size_m": 48,
+                "spec_ngram_min_hits": 3,
+            }
+        )
+        cmd = build_command(1)
+        assert "--spec-ngram-size-n" not in cmd
+        assert "--spec-ngram-size-m" not in cmd
+        assert "--spec-ngram-min-hits" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_per_type_ngram_flags(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            speculative={
+                "spec_ngram_simple_size_n": 12,
+                "spec_ngram_simple_size_m": 48,
+                "spec_ngram_simple_min_hits": 2,
+                "spec_ngram_map_k_size_n": 10,
+                "spec_ngram_map_k_size_m": 40,
+                "spec_ngram_map_k_min_hits": 1,
+                "spec_ngram_map_k4v_size_n": 11,
+                "spec_ngram_map_k4v_size_m": 41,
+                "spec_ngram_map_k4v_min_hits": 3,
+                "spec_ngram_mod_n_min": 48,
+                "spec_ngram_mod_n_max": 64,
+                "spec_ngram_mod_n_match": 24,
+            }
+        )
+        cmd = build_command(1)
+        for flag in (
+            "--spec-ngram-simple-size-n",
+            "--spec-ngram-simple-size-m",
+            "--spec-ngram-simple-min-hits",
+            "--spec-ngram-map-k-size-n",
+            "--spec-ngram-map-k-size-m",
+            "--spec-ngram-map-k-min-hits",
+            "--spec-ngram-map-k4v-size-n",
+            "--spec-ngram-map-k4v-size-m",
+            "--spec-ngram-map-k4v-min-hits",
+            "--spec-ngram-mod-n-min",
+            "--spec-ngram-mod-n-max",
+            "--spec-ngram-mod-n-match",
+        ):
+            assert flag in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_checkpoint_min_step(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            checkpoints={"checkpoint_min_step": 4096}
+        )
+        cmd = build_command(1)
+        assert "--checkpoint-min-step" in cmd
+        assert "4096" in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_checkpoint_every_nt_not_emitted(self, mock_data):
+        # --checkpoint-every-n-tokens was removed in b10355
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            checkpoints={"checkpoint_every_nt": 1000}
+        )
+        cmd = build_command(1)
+        assert "--checkpoint-every-n-tokens" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_lora_split_into_scaled(self, mock_data):
+        # scaled adapters must use --lora-scaled since b10355
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            lora_adapters=[
+                {"path": "/lora/plain.gguf"},
+                {"path": "/lora/scaled.gguf", "scale": 0.5},
+            ]
+        )
+        cmd = build_command(1)
+        lora_idx = cmd.index("--lora")
+        assert cmd[lora_idx + 1] == "/lora/plain.gguf"
+        scaled_idx = cmd.index("--lora-scaled")
+        assert cmd[scaled_idx + 1] == "/lora/scaled.gguf:0.5"
+
+    @patch("models.configs.get_all_version_data")
+    def test_lora_all_scaled_uses_lora_scaled_only(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            lora_adapters=[
+                {"path": "/lora/a.gguf", "scale": 0.8},
+                {"path": "/lora/b.gguf", "scale": 1.0},
+            ]
+        )
+        cmd = build_command(1)
+        assert "--lora-scaled" in cmd
+        assert "--lora" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_webui_mcp_proxy_enabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            server={"webui_mcp_proxy": 1}
+        )
+        cmd = build_command(1)
+        assert "--ui-mcp-proxy" in cmd
+        assert "--no-ui-mcp-proxy" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_webui_mcp_proxy_disabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            server={"webui_mcp_proxy": 0}
+        )
+        cmd = build_command(1)
+        assert "--no-ui-mcp-proxy" in cmd
+        assert "--ui-mcp-proxy" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_ui_config_flags(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            server={
+                "webui_config": '{"theme":"dark"}',
+                "webui_config_file": "/etc/ui.json",
+                "tools": "all",
+            }
+        )
+        cmd = build_command(1)
+        idx = cmd.index("--ui-config")
+        assert cmd[idx + 1] == '{"theme":"dark"}'
+        assert "--ui-config-file" in cmd
+        assert cmd[cmd.index("--ui-config-file") + 1] == "/etc/ui.json"
+        assert "--tools" in cmd
+        idx = cmd.index("--tools")
+        assert cmd[idx + 1] == "all"
+
+
+    @patch("models.configs.get_all_version_data")
+    def test_reasoning_preserve_enabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            chat_templates={"reasoning_preserve": 1}
+        )
+        cmd = build_command(1)
+        assert "--reasoning-preserve" in cmd
+        assert "--no-reasoning-preserve" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_reasoning_preserve_disabled(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(
+            chat_templates={"reasoning_preserve": 0}
+        )
+        cmd = build_command(1)
+        assert "--no-reasoning-preserve" in cmd
+        assert "--reasoning-preserve" not in cmd
+
+    @patch("models.configs.get_all_version_data")
+    def test_reasoning_preserve_default_omitted(self, mock_data):
+        from services.command_builder import build_command
+
+        mock_data.return_value = self._mock_data(chat_templates={})
+        cmd = build_command(1)
+        assert "--reasoning-preserve" not in cmd
+        assert "--no-reasoning-preserve" not in cmd
 
 
 class TestGetModelsInDir:
@@ -656,7 +954,8 @@ class TestBuildCommandMultipleComplexTables:
             dry_sequence_breakers=[{"breaker_char": "."}],
         )
         cmd = build_command(1)
-        assert "--lora" in cmd
+        # scaled lora emitted via --lora-scaled since b10355
+        assert "--lora-scaled" in cmd
         assert "--control-vector-scaled" in cmd
         assert "--logit-bias" in cmd
         assert "--override-kv" in cmd

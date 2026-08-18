@@ -20,6 +20,7 @@ FLAG_DEFINITIONS = {
         ("--hf-file", "-hff", False, None),
         ("--hf-token", "-hft", False, None),
         ("--lora", None, False, None),
+        ("--lora-scaled", None, False, None),
         ("--control-vector", None, False, None),
         ("--mmproj", "-mm", False, None),
         ("--mmproj-url", "-mmu", False, None),
@@ -87,6 +88,7 @@ FLAG_DEFINITIONS = {
         ("-ctv", "--cache-type-v", False, None),
         ("-ctkd", "--cache-type-k-draft", False, None),
         ("-ctvd", "--cache-type-v-draft", False, None),
+        ("-lm", "--load-mode", False, None),
         ("--mmap/--no-mmap", None, True, None),
         ("--mlock", None, True, None),
         ("--direct-io/--no-direct-io", "-dio/-ndio", True, None),
@@ -140,6 +142,10 @@ FLAG_DEFINITIONS = {
         ("--metrics", None, True, None),
         ("--props", None, True, None),
         ("--slots/--no-slots", None, True, None),
+        ("--ui-config", "--webui-config", False, None),
+        ("--ui-config-file", "--webui-config-file", False, None),
+        ("--ui-mcp-proxy/--no-ui-mcp-proxy", "--webui-mcp-proxy/--no-webui-mcp-proxy", True, None),
+        ("--tools", None, False, None),
         ("--slot-save-path", None, False, None),
         ("--media-path", None, False, None),
         ("--lora-init-without-apply", None, True, None),
@@ -147,17 +153,25 @@ FLAG_DEFINITIONS = {
     ],
     "speculative": [
         ("-md", "--model-draft", False, None),
-        ("--draft", "--draft-max", False, None),
-        ("--draft-min", "--draft-n-min", False, None),
-        ("--draft-p-min", None, False, float_fmt),
-        ("-cd", "--ctx-size-draft", False, None),
+        ("--spec-draft-n-max", None, False, None),
+        ("--spec-draft-n-min", None, False, None),
+        ("--spec-draft-p-split", "--draft-p-split", False, float_fmt),
+        ("--spec-draft-p-min", "--draft-p-min", False, float_fmt),
         ("-devd", "--device-draft", False, None),
         ("-ngld", "--gpu-layers-draft", False, None),
         ("--spec-type", None, False, None),
-        ("--spec-ngram-size-n", None, False, None),
-        ("--spec-ngram-size-m", None, False, None),
-        ("--spec-ngram-min-hits", None, False, None),
-        ("--spec-draft-n-max", None, False, None),
+        ("--spec-ngram-simple-size-n", None, False, None),
+        ("--spec-ngram-simple-size-m", None, False, None),
+        ("--spec-ngram-simple-min-hits", None, False, None),
+        ("--spec-ngram-map-k-size-n", None, False, None),
+        ("--spec-ngram-map-k-size-m", None, False, None),
+        ("--spec-ngram-map-k-min-hits", None, False, None),
+        ("--spec-ngram-map-k4v-size-n", None, False, None),
+        ("--spec-ngram-map-k4v-size-m", None, False, None),
+        ("--spec-ngram-map-k4v-min-hits", None, False, None),
+        ("--spec-ngram-mod-n-min", None, False, None),
+        ("--spec-ngram-mod-n-max", None, False, None),
+        ("--spec-ngram-mod-n-match", None, False, None),
         ("--spec-replace", None, False, None),
         ("-otd", "--override-tensor-draft", False, None),
     ],
@@ -170,12 +184,13 @@ FLAG_DEFINITIONS = {
         ("-rea", "--reasoning", False, None),
         ("--reasoning-budget", None, False, None),
         ("--reasoning-budget-message", None, False, None),
+        ("--reasoning-preserve/--no-reasoning-preserve", None, True, None),
         ("--skip-chat-parsing/--no-skip-chat-parsing", None, True, None),
         ("--prefill-assistant/--no-prefill-assistant", None, True, None),
     ],
     "checkpoints": [
         ("-ctxcp", "--ctx-checkpoints", False, None),
-        ("-cpent", "--checkpoint-every-n-tokens", False, None),
+        ("-cms", "--checkpoint-min-step", False, None),
         ("-cram", "--cache-ram", False, None),
         ("--kv-unified/--no-kv-unified", "-kvu/-no-kvu", True, None),
         ("--cache-idle-slots/--no-cache-idle-slots", None, True, None),
@@ -288,6 +303,7 @@ COLUMN_MAP = {
         "cache_type_v": "--cache-type-v",
         "cache_type_k_draft": "--cache-type-k-draft",
         "cache_type_v_draft": "--cache-type-v-draft",
+        "load_mode": "--load-mode",
         "mmap": "--mmap/--no-mmap",
         "mlock": "--mlock",
         "direct_io": "--direct-io/--no-direct-io",
@@ -335,6 +351,10 @@ COLUMN_MAP = {
         "ssl_key_file": "--ssl-key-file",
         "ssl_cert_file": "--ssl-cert-file",
         "webui": "--webui/--no-webui",
+        "webui_config": "--ui-config",
+        "webui_config_file": "--ui-config-file",
+        "webui_mcp_proxy": "--ui-mcp-proxy/--no-ui-mcp-proxy",
+        "tools": "--tools",
         "embedding": "--embedding",
         "reranking": "--reranking",
         "metrics": "--metrics",
@@ -346,17 +366,25 @@ COLUMN_MAP = {
         "sleep_idle_seconds": "--sleep-idle-seconds",
     },
     "speculative": {
-        "draft_max": "--draft-max",
-        "draft_min": "--draft-min",
-        "draft_p_min": "--draft-p-min",
-        "ctx_size_draft": "--ctx-size-draft",
+        "draft_p_min": "--spec-draft-p-min",
+        "spec_draft_n_max": "--spec-draft-n-max",
+        "spec_draft_n_min": "--spec-draft-n-min",
+        "spec_draft_p_split": "--spec-draft-p-split",
         "devices_draft": "--device-draft",
         "gpu_layers_draft": "--gpu-layers-draft",
         "spec_type": "--spec-type",
-        "spec_ngram_size_n": "--spec-ngram-size-n",
-        "spec_ngram_size_m": "--spec-ngram-size-m",
-        "spec_ngram_min_hits": "--spec-ngram-min-hits",
-        "spec_draft_n_max": "--spec-draft-n-max",
+        "spec_ngram_simple_size_n": "--spec-ngram-simple-size-n",
+        "spec_ngram_simple_size_m": "--spec-ngram-simple-size-m",
+        "spec_ngram_simple_min_hits": "--spec-ngram-simple-min-hits",
+        "spec_ngram_map_k_size_n": "--spec-ngram-map-k-size-n",
+        "spec_ngram_map_k_size_m": "--spec-ngram-map-k-size-m",
+        "spec_ngram_map_k_min_hits": "--spec-ngram-map-k-min-hits",
+        "spec_ngram_map_k4v_size_n": "--spec-ngram-map-k4v-size-n",
+        "spec_ngram_map_k4v_size_m": "--spec-ngram-map-k4v-size-m",
+        "spec_ngram_map_k4v_min_hits": "--spec-ngram-map-k4v-min-hits",
+        "spec_ngram_mod_n_min": "--spec-ngram-mod-n-min",
+        "spec_ngram_mod_n_max": "--spec-ngram-mod-n-max",
+        "spec_ngram_mod_n_match": "--spec-ngram-mod-n-match",
     },
     "chat_templates": {
         "chat_template": "--chat-template",
@@ -366,12 +394,13 @@ COLUMN_MAP = {
         "reasoning": "--reasoning",
         "reasoning_budget": "--reasoning-budget",
         "reasoning_budget_message": "--reasoning-budget-message",
+        "reasoning_preserve": "--reasoning-preserve/--no-reasoning-preserve",
         "skip_chat_parsing": "--skip-chat-parsing/--no-skip-chat-parsing",
         "prefill_assistant": "--prefill-assistant/--no-prefill-assistant",
     },
     "checkpoints": {
         "ctx_checkpoints": "--ctx-checkpoints",
-        "checkpoint_every_nt": "--checkpoint-every-n-tokens",
+        "checkpoint_min_step": "--checkpoint-min-step",
         "cache_ram": "--cache-ram",
         "kv_unified": "--kv-unified/--no-kv-unified",
         "cache_idle_slots": "--cache-idle-slots/--no-cache-idle-slots",
@@ -435,6 +464,7 @@ BOOL_FIELDS = {
     "server": {
         "reuse_port",
         "webui",
+        "webui_mcp_proxy",
         "embedding",
         "reranking",
         "metrics",
@@ -442,7 +472,12 @@ BOOL_FIELDS = {
         "slots",
         "lora_init_without_apply",
     },
-    "chat_templates": {"jinja", "skip_chat_parsing", "prefill_assistant"},
+    "chat_templates": {
+        "jinja",
+        "skip_chat_parsing",
+        "prefill_assistant",
+        "reasoning_preserve",
+    },
     "checkpoints": {"kv_unified", "cache_idle_slots"},
     "logging": {
         "log_prefix",
@@ -467,6 +502,12 @@ def build_command(version_id):
 
     parts = [SERVER_BINARY]
     data = get_all_version_data(version_id)
+
+    # --load-mode supersedes the deprecated --mmap/--mlock/--direct-io flags
+    mem_row = data.get("memory", {})
+    if mem_row.get("load_mode"):
+        for legacy in ("mmap", "mlock", "direct_io"):
+            mem_row.pop(legacy, None)
 
     for category in CATEGORIES:
         row = data.get(category, {})
@@ -513,16 +554,20 @@ def build_command(version_id):
         parts = new_parts
 
     # LoRA adapters from structured table
+    # Scaled adapters use --lora-scaled (since llama.cpp b10355)
     loras = data.get("lora_adapters", [])
     if loras:
-        lora_args = []
+        plain_args = []
+        scaled_args = []
         for la in loras:
             if la.get("scale"):
-                lora_args.append(f"{la['path']}:{la['scale']}")
+                scaled_args.append(f"{la['path']}:{la['scale']}")
             else:
-                lora_args.append(la["path"])
-        if lora_args:
-            parts.extend(["--lora", ",".join(lora_args)])
+                plain_args.append(la["path"])
+        if plain_args:
+            parts.extend(["--lora", ",".join(plain_args)])
+        if scaled_args:
+            parts.extend(["--lora-scaled", ",".join(scaled_args)])
 
     # Control vectors from structured table
     cvs = data.get("control_vectors", [])
@@ -593,12 +638,7 @@ def build_command(version_id):
     if md:
         parts.extend(["--model-draft", md])
 
-    # Vocoder model
-    mv = data.get("model_loading", {}).get("model_vocoder")
-    if mv:
-        parts.extend(["--model-vocoder", mv])
-
-    # LoRA scaled (from model_loading lora_paths as fallback)
+    # LoRA (from model_loading lora_paths as fallback)
     lora_paths = data.get("model_loading", {}).get("lora_paths")
     if lora_paths and not loras:
         parts.extend(["--lora", lora_paths])
